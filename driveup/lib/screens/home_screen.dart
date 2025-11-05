@@ -40,7 +40,7 @@ class HomePage extends StatelessWidget {
           onPressed: () {},
         ),
         centerTitle: true,
-        title: const Text('INICIO',
+        title: const Text('INÍCIO',
             style: TextStyle(
               color: Colors.black87,
               letterSpacing: 1,
@@ -397,7 +397,7 @@ class _BottomItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = selected ? Colors.black87 : Colors.black54;
+    final color = selected ? const Color(0xFFFFC107) : Colors.black54;
 
     return Material( // garante ink ripple no BottomAppBar (que já é Material)
       type: MaterialType.transparency,
