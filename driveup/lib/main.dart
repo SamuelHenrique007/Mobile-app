@@ -8,7 +8,10 @@ import 'package:flutter/material.dart';
 //import 'screens/empty_notifications_page.dart';
 //import 'screens/mensagem_notificacao_page.dart';
 //import 'screens/veiculos_page.dart';
-import 'screens/form_veiculo_page.dart';
+//import 'screens/form_veiculo_page.dart';
+//import 'screens/relatorios_page.dart';
+//import 'screens/perfil_page.dart';
+import 'screens/sidemenu_page.dart';
 
 void main() {
   runApp(const MyApp());
@@ -21,7 +24,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return const MaterialApp(
       debugShowCheckedModeBanner: false,
-      home: FormVeiculoPage(),
+      home: SideMenuPage(),
     );
   }
 }
