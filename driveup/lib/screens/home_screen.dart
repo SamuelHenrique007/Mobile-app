@@ -1,4 +1,3 @@
-
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
 
@@ -6,7 +5,6 @@ void main() => runApp(const MyApp());
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
-
 
   @override
   Widget build(BuildContext context) {
@@ -17,12 +15,10 @@ class MyApp extends StatelessWidget {
         useMaterial3: true,
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.amber),
         scaffoldBackgroundColor: const Color(0xFFF5F5F5),
-        // ❌ Removido o cardTheme para evitar erro no Flutter 3.35
       ),
       home: const HomePage(),
-  );  
-  } 
-
+    );
+  }
 }
 
 class HomePage extends StatelessWidget {
@@ -62,7 +58,7 @@ class HomePage extends StatelessWidget {
         children: const [
           SizedBox(height: 8),
           _SectionTitle('RESUMO'),
-          SummaryCard(),
+          SummaryCard(), // <- agora é Stateful e mostra < MÊS >
           SizedBox(height: 4),
           _SectionTitle('VEÍCULOS'),
           VehicleCard(
@@ -85,11 +81,14 @@ class HomePage extends StatelessWidget {
         ],
       ),
       floatingActionButton: FloatingActionButton(
-        backgroundColor: yellow,
+        shape: const CircleBorder(),
+        clipBehavior: Clip.antiAlias, // borda lisa
+        backgroundColor: const Color(0xFFFFC107),
         elevation: 3,
         onPressed: () {},
         child: const Icon(Icons.add, color: Colors.black87, size: 28),
       ),
+
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
       bottomNavigationBar: const _BottomBar(),
     );
@@ -117,15 +116,48 @@ class _SectionTitle extends StatelessWidget {
   }
 }
 
-/// ====== RESUMO ======
+/// ====== RESUMO (com < MÊS > no centro) ======
 
-class SummaryCard extends StatelessWidget {
+class SummaryCard extends StatefulWidget {
   const SummaryCard({super.key});
 
   @override
+  State<SummaryCard> createState() => _SummaryCardState();
+}
+
+class _SummaryCardState extends State<SummaryCard> {
+  // meses em PT-BR (maiúsculos para combinar com o mock)
+  final List<String> _months = const [
+    'JANEIRO',
+    'FEVEREIRO',
+    'MARÇO',
+    'ABRIL',
+    'MAIO',
+    'JUNHO',
+    'JULHO',
+    'AGOSTO',
+    'SETEMBRO',
+    'OUTUBRO',
+    'NOVEMBRO',
+    'DEZEMBRO'
+  ];
+  int _monthIndex = 5; // 0=JAN ... 5=JUNHO
+
+  void _prevMonth() {
+    setState(() {
+      _monthIndex = (_monthIndex - 1) % 12;
+      if (_monthIndex < 0) _monthIndex += 12;
+    });
+  }
+
+  void _nextMonth() {
+    setState(() {
+      _monthIndex = (_monthIndex + 1) % 12;
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final cs = Theme.of(context).colorScheme;
-    // Cores dos segmentos (azul, amarelo, verde, vermelho) como na imagem
     final segments = [
       DonutSegment(value: 0.16, color: Colors.blue.shade600),
       DonutSegment(value: 0.28, color: const Color(0xFFFFC107)),
@@ -149,27 +181,41 @@ class SummaryCard extends StatelessWidget {
                     thickness: 28,
                     gap: 4,
                   ),
-                  Column(
+                  // Centro do gráfico: < MÊS >
+                  Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: const [
-                          Text('<', style: TextStyle(fontSize: 16)),
-                          SizedBox(width: 32),
-                          const Text(
-                          'JUNHO',
-                            style: TextStyle(
-                              fontSize: 16,
-                              letterSpacing: .8,
-                              fontWeight: FontWeight.w600),
+                      GestureDetector(
+                        onTap: _prevMonth,
+                        child: const Padding(
+                          padding:
+                              EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                          child: Text('<',
+                              style: TextStyle(
+                                  fontSize: 16, color: Colors.black87)),
+                        ),
                       ),
-                          SizedBox(width: 32),
-                          Text('>', style: TextStyle(fontSize: 16)),
-                        ],
+                      const SizedBox(width: 12),
+                      Text(
+                        _months[_monthIndex],
+                        style: const TextStyle(
+                          fontSize: 16,
+                          letterSpacing: .8,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black87,
+                        ),
                       ),
-                      const SizedBox(height: 6),
-                      
+                      const SizedBox(width: 12),
+                      GestureDetector(
+                        onTap: _nextMonth,
+                        child: const Padding(
+                          padding:
+                              EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+                          child: Text('>',
+                              style: TextStyle(
+                                  fontSize: 16, color: Colors.black87)),
+                        ),
+                      ),
                     ],
                   ),
                 ],
@@ -324,11 +370,6 @@ class _MiniInfo extends StatelessWidget {
   }
 }
 
-/// Pequena extensão para escrever "Campo: valor"
-extension on Column {
-  Column apply() => this;
-}
-
 /// ====== BOTTOM BAR ======
 
 class _BottomBar extends StatelessWidget {
@@ -380,7 +421,6 @@ class _BottomBar extends StatelessWidget {
   }
 }
 
-
 class _BottomItem extends StatelessWidget {
   final IconData icon;
   final String label;
@@ -399,12 +439,12 @@ class _BottomItem extends StatelessWidget {
   Widget build(BuildContext context) {
     final color = selected ? const Color(0xFFFFC107) : Colors.black54;
 
-    return Material( // garante ink ripple no BottomAppBar (que já é Material)
+    return Material(
       type: MaterialType.transparency,
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
         onTap: onTap,
-        mouseCursor: SystemMouseCursors.click, // cursor de mão no web/desktop
+        mouseCursor: SystemMouseCursors.click,
         splashFactory: InkRipple.splashFactory,
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -421,7 +461,6 @@ class _BottomItem extends StatelessWidget {
     );
   }
 }
-
 
 /// ====== DONUT CHART (CustomPaint) ======
 
