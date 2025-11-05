@@ -36,12 +36,14 @@ class HomePage extends StatelessWidget {
           onPressed: () {},
         ),
         centerTitle: true,
-        title: const Text('INÍCIO',
-            style: TextStyle(
-              color: Colors.black87,
-              letterSpacing: 1,
-              fontWeight: FontWeight.w600,
-            )),
+        title: const Text(
+          'INÍCIO',
+          style: TextStyle(
+            color: Colors.black87,
+            letterSpacing: 1,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
         actions: const [
           Padding(
             padding: EdgeInsets.only(right: 12),
@@ -50,7 +52,7 @@ class HomePage extends StatelessWidget {
               backgroundColor: Colors.orange,
               child: Icon(Icons.person, color: Colors.white, size: 18),
             ),
-          )
+          ),
         ],
       ),
       body: ListView(
@@ -116,8 +118,6 @@ class _SectionTitle extends StatelessWidget {
   }
 }
 
-/// ====== RESUMO (com < MÊS > no centro) ======
-
 class SummaryCard extends StatefulWidget {
   const SummaryCard({super.key});
 
@@ -139,7 +139,7 @@ class _SummaryCardState extends State<SummaryCard> {
     'SETEMBRO',
     'OUTUBRO',
     'NOVEMBRO',
-    'DEZEMBRO'
+    'DEZEMBRO',
   ];
   int _monthIndex = 5; // 0=JAN ... 5=JUNHO
 
@@ -176,11 +176,7 @@ class _SummaryCardState extends State<SummaryCard> {
               child: Stack(
                 alignment: Alignment.center,
                 children: [
-                  DonutChart(
-                    segments: segments,
-                    thickness: 28,
-                    gap: 4,
-                  ),
+                  DonutChart(segments: segments, thickness: 28, gap: 4),
                   // Centro do gráfico: < MÊS >
                   Row(
                     mainAxisSize: MainAxisSize.min,
@@ -188,11 +184,17 @@ class _SummaryCardState extends State<SummaryCard> {
                       GestureDetector(
                         onTap: _prevMonth,
                         child: const Padding(
-                          padding:
-                              EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                          child: Text('<',
-                              style: TextStyle(
-                                  fontSize: 16, color: Colors.black87)),
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 6,
+                          ),
+                          child: Text(
+                            '<',
+                            style: TextStyle(
+                              fontSize: 16,
+                              color: Colors.black87,
+                            ),
+                          ),
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -209,11 +211,17 @@ class _SummaryCardState extends State<SummaryCard> {
                       GestureDetector(
                         onTap: _nextMonth,
                         child: const Padding(
-                          padding:
-                              EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                          child: Text('>',
-                              style: TextStyle(
-                                  fontSize: 16, color: Colors.black87)),
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 8,
+                            vertical: 6,
+                          ),
+                          child: Text(
+                            '>',
+                            style: TextStyle(
+                              fontSize: 16,
+                              color: Colors.black87,
+                            ),
+                          ),
                         ),
                       ),
                     ],
@@ -260,8 +268,12 @@ class SummaryAction extends StatelessWidget {
   final Color color;
   final IconData icon;
   final String label;
-  const SummaryAction(
-      {super.key, required this.color, required this.icon, required this.label});
+  const SummaryAction({
+    super.key,
+    required this.color,
+    required this.icon,
+    required this.label,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -322,9 +334,13 @@ class VehicleCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(title,
-                      style: const TextStyle(
-                          fontSize: 16, fontWeight: FontWeight.w600)),
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
                   const SizedBox(height: 6),
                   Wrap(
                     spacing: 24,
