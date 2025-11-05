@@ -1,8 +1,8 @@
 import 'package:driveup/screens/splash_screen.dart';
 import 'package:flutter/material.dart';
-//import 'screens/login_screen.dart';
+import 'screens/login_screen.dart';
 //import 'screens/cadastro_page.dart';
-//import 'screens/home_screen.dart';
+import 'screens/home_screen.dart';
 //import 'screens/cadastro_confirm_page.dart';
 
 void main() {
@@ -16,7 +16,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return const MaterialApp(
       debugShowCheckedModeBanner: false,
-      home: SplashScreen(),
+      home: HomePage(),
     );
   }
 }
