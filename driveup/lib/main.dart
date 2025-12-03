@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
+import 'firebase_options.dart';
 
-// Importar todas as telas
+// Telas
 import 'screens/splash_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/cadastro_page.dart';
@@ -13,11 +16,15 @@ import 'screens/mensagem_notificacao_page.dart';
 import 'screens/veiculos_page.dart';
 import 'screens/form_veiculo_page.dart';
 import 'screens/relatorios_page.dart';
-import 'screens/menu_dev_page.dart'; // (vamos criar já já)
-import 'screens/perfil_page.dart';
-import 'screens/sidemenu_page.dart';
+import 'screens/menu_dev_page.dart';
 
-void main() => runApp(const MyApp());
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
+  runApp(const MyApp());
+}
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
@@ -27,14 +34,13 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'DriveUp',
       debugShowCheckedModeBanner: false,
-
       theme: ThemeData(
         useMaterial3: true,
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.amber),
       ),
 
-      // A tela inicial será o MENU DE DESENVOLVIMENTO
-      initialRoute: '/menu',
+      // Em vez de initialRoute, usamos um “portão” que decide a tela inicial
+      home: const AuthGate(),
 
       routes: {
         '/menu': (context) => const MenuDevPage(),
@@ -49,8 +55,39 @@ class MyApp extends StatelessWidget {
         '/veiculos': (context) => const VeiculosPage(),
         '/formVeiculo': (context) => const FormVeiculoPage(),
         '/relatorio': (context) => const RelatoriosPage(),
-        '/perfil': (context) => const PerfilPage(),
-        '/sidemenu': (context) => const SideMenuPage(),
+      },
+    );
+  }
+}
+
+/// Decide automaticamente se mostra Login, Confirmação ou Home
+class AuthGate extends StatelessWidget {
+  const AuthGate({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<User?>(
+      stream: FirebaseAuth.instance.authStateChanges(),
+      builder: (context, snapshot) {
+        // Enquanto o Firebase está carregando o usuário
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const SplashScreen();
+        }
+
+        final user = snapshot.data;
+
+        // Ninguém logado -> vai para Login
+        if (user == null) {
+          return const LoginScreen();
+        }
+
+        // Logado mas sem e-mail verificado -> tela de confirmação
+        if (!user.emailVerified) {
+          return const CadastroConfirmPage();
+        }
+
+        // Logado e verificado -> Home
+        return const HomePage();
       },
     );
   }

@@ -1,6 +1,6 @@
 name: driveup
 description: "Aplicativo DriveUP - Projeto Flutter"
-publish_to: 'none' 
+publish_to: 'none'
 
 version: 1.0.0+1
 
@@ -11,7 +11,13 @@ dependencies:
   flutter:
     sdk: flutter
 
-  # Ícones no estilo iOS (já padrão)
+  # Firebase
+  firebase_core: ^3.0.0
+  cloud_firestore: ^5.0.0
+  firebase_auth: ^5.0.0
+  firebase_storage: ^12.0.0
+
+  # Ícones no estilo iOS
   cupertino_icons: ^1.0.8
 
 dev_dependencies:
@@ -29,4 +35,3 @@ flutter:
     - assets/icons/facebook.png
     - assets/icons/google.png
     - assets/icons/apple.png
-    
