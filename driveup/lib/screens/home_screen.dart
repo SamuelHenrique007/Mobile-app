@@ -1,32 +1,13 @@
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
 
-void main() => runApp(const MyApp());
-
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Veículos',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        useMaterial3: true,
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.amber),
-        scaffoldBackgroundColor: const Color(0xFFF5F5F5),
-      ),
-      home: const HomePage(),
-    );
-  }
-}
+import 'package:driveup/services/vehicle_service.dart'; // 👈 backend de veículos
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
 
   @override
   Widget build(BuildContext context) {
-    const yellow = Color(0xFFFFC107);
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.white,
@@ -55,69 +36,94 @@ class HomePage extends StatelessWidget {
           ),
         ],
       ),
-      body: ListView(
-        padding: const EdgeInsets.symmetric(horizontal: 12),
-        children: const [
-          SizedBox(height: 8),
-          _SectionTitle('RESUMO'),
-          SummaryCard(), // <- agora é Stateful e mostra < MÊS >
-          SizedBox(height: 4),
-          _SectionTitle('VEÍCULOS'),
-          VehicleCard(
-            icon: Icons.directions_car_outlined,
-            title: 'Jetta - Branco',
-            model: 'Jetta',
-            year: '2018',
-            color: 'Branco',
-            brand: 'Volkswagen',
-          ),
-          VehicleCard(
-            icon: Icons.motorcycle_outlined,
-            title: 'Titan 160 - Vermelho',
-            model: 'Titan',
-            year: '2022',
-            color: 'Vermelho',
-            brand: 'Honda',
-          ),
-          SizedBox(height: 92),
-        ],
-      ),
-      floatingActionButton: FloatingActionButton(
-        shape: const CircleBorder(),
-        clipBehavior: Clip.antiAlias,
-        backgroundColor: const Color(0xFFFFC107),
-        elevation: 3,
-        onPressed: () => _abrirModalAdicionar(context),
-        child: const Icon(Icons.add, color: Colors.black87, size: 28),
+
+      // 👇 só o conteúdo, sem FAB nem bottom bar
+      body: StreamBuilder<List<Vehicle>>(
+        stream: VehicleService.instance.vehiclesStream(),
+        builder: (context, snapshot) {
+          final children = <Widget>[
+            const SizedBox(height: 8),
+            const _SectionTitle('RESUMO'),
+            const SummaryCard(),
+            const SizedBox(height: 4),
+            const _SectionTitle('VEÍCULOS'),
+          ];
+
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            children.add(
+              const Padding(
+                padding: EdgeInsets.all(16),
+                child: Center(child: CircularProgressIndicator()),
+              ),
+            );
+          } else if (snapshot.hasError) {
+            children.add(
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Text(
+                  'Erro ao carregar veículos:\n${snapshot.error}',
+                  style: const TextStyle(color: Colors.redAccent),
+                ),
+              ),
+            );
+          } else {
+            final veiculos = snapshot.data ?? [];
+
+            if (veiculos.isEmpty) {
+              children.add(
+                const Padding(
+                  padding: EdgeInsets.all(16),
+                  child: Text(
+                    'Você ainda não cadastrou nenhum veículo.',
+                    style: TextStyle(color: Colors.black54),
+                  ),
+                ),
+              );
+            } else {
+              for (final v in veiculos) {
+                children.add(
+                  VehicleCard(
+                    icon: v.type == 'Moto'
+                        ? Icons.motorcycle_outlined
+                        : Icons.directions_car_outlined,
+                    title: v.name,
+                    model: v.model,
+                    year: v.year,
+                    color: v.color,
+                    brand: v.brand,
+                  ),
+                );
+              }
+            }
+          }
+
+          children.add(const SizedBox(height: 32));
+
+          return ListView(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            children: children,
+          );
+        },
       ),
     );
   }
 }
 
-void _abrirModalAdicionar(BuildContext context) {
-  showModalBottomSheet(
-    context: context,
-    backgroundColor: Colors.transparent,
-    barrierColor: Colors.black.withOpacity(0.6),
-    isScrollControlled: false,
-    builder: (_) => const _AddOptionsModal(),
-  );
-}
-
+/// ====== SECTION TITLE ======
 class _SectionTitle extends StatelessWidget {
-  final String text;
-  const _SectionTitle(this.text);
+  final String title;
+  const _SectionTitle(this.title, {super.key});
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(8, 12, 8, 4),
+      padding: const EdgeInsets.fromLTRB(12, 16, 12, 8),
       child: Text(
-        text,
+        title,
         style: const TextStyle(
-          fontSize: 16,
-          letterSpacing: .5,
+          fontSize: 14,
           fontWeight: FontWeight.w600,
+          letterSpacing: 1,
           color: Colors.black87,
         ),
       ),
@@ -125,6 +131,7 @@ class _SectionTitle extends StatelessWidget {
   }
 }
 
+/// ====== CARD DE RESUMO (gráfico) ======
 class SummaryCard extends StatefulWidget {
   const SummaryCard({super.key});
 
@@ -133,7 +140,6 @@ class SummaryCard extends StatefulWidget {
 }
 
 class _SummaryCardState extends State<SummaryCard> {
-  // meses em PT-BR (maiúsculos para combinar com o mock)
   final List<String> _months = const [
     'JANEIRO',
     'FEVEREIRO',
@@ -148,7 +154,7 @@ class _SummaryCardState extends State<SummaryCard> {
     'NOVEMBRO',
     'DEZEMBRO',
   ];
-  int _monthIndex = 5; // 0=JAN ... 5=JUNHO
+  int _monthIndex = 5;
 
   void _prevMonth() {
     setState(() {
@@ -177,14 +183,12 @@ class _SummaryCardState extends State<SummaryCard> {
         padding: const EdgeInsets.fromLTRB(12, 18, 12, 8),
         child: Column(
           children: [
-            // Gráfico + rótulo central
             SizedBox(
               height: 240,
               child: Stack(
                 alignment: Alignment.center,
                 children: [
                   DonutChart(segments: segments, thickness: 28, gap: 4),
-                  // Centro do gráfico: < MÊS >
                   Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -237,7 +241,6 @@ class _SummaryCardState extends State<SummaryCard> {
               ),
             ),
             const SizedBox(height: 8),
-            // Ações
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: const [
@@ -305,144 +308,7 @@ class SummaryAction extends StatelessWidget {
   }
 }
 
-/// ====== MODAL ADICIONAR ======
-
-class _AddOptionsModal extends StatelessWidget {
-  const _AddOptionsModal({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Align(
-          alignment: Alignment.topLeft,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'ADICIONAR',
-                style: TextStyle(
-                  color: Colors.white70,
-                  fontSize: 12,
-                  letterSpacing: 1.2,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Container(
-                width: 220,
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(14),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.25),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    _AddOptionTile(
-                      icon: Icons.local_gas_station,
-                      label: 'Abastecimento',
-                      onTap: () {
-                        Navigator.pop(context);
-                        // TODO: navegar para tela de Abastecimento
-                      },
-                    ),
-                    const Divider(height: 1),
-                    _AddOptionTile(
-                      icon: Icons.receipt_long,
-                      label: 'Despesa',
-                      onTap: () {
-                        Navigator.pop(context);
-                        // TODO: navegar para tela de Despesa
-                      },
-                    ),
-                    const Divider(height: 1),
-                    _AddOptionTile(
-                      icon: Icons.attach_money,
-                      label: 'Receita',
-                      onTap: () {
-                        Navigator.pop(context);
-                      },
-                    ),
-                    const Divider(height: 1),
-                    _AddOptionTile(
-                      icon: Icons.build,
-                      label: 'Serviço',
-                      onTap: () {
-                        Navigator.pop(context);
-                      },
-                    ),
-                    const Divider(height: 1),
-                    _AddOptionTile(
-                      icon: Icons.alt_route,
-                      label: 'Percurso',
-                      onTap: () {
-                        Navigator.pop(context);
-                      },
-                    ),
-                    const Divider(height: 1),
-                    _AddOptionTile(
-                      icon: Icons.notifications_active_outlined,
-                      label: 'Lembrete',
-                      onTap: () {
-                        Navigator.pop(context);
-                      },
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _AddOptionTile extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
-
-  const _AddOptionTile({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-    super.key,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-        child: Row(
-          children: [
-            Icon(icon, size: 20, color: Colors.black87),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Text(
-                label,
-                style: const TextStyle(fontSize: 14, color: Colors.black87),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-/// ====== VEÍCULOS ======
-
+/// ====== CARD DE VEÍCULO (HOME) ======
 class VehicleCard extends StatelessWidget {
   final IconData icon;
   final String title;
@@ -498,14 +364,6 @@ class VehicleCard extends StatelessWidget {
                 ],
               ),
             ),
-            IconButton(
-              onPressed: () {},
-              icon: const Icon(Icons.edit_outlined, size: 18),
-              color: Colors.black54,
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(),
-              tooltip: 'Editar',
-            ),
           ],
         ),
       ),
@@ -525,6 +383,54 @@ class _MiniInfo extends StatelessWidget {
     return Text(
       '$label: $value',
       style: TextStyle(fontSize: 12.5, color: color),
+    );
+  }
+}
+
+/// ====== BOTTOM BAR ======
+class _BottomBar extends StatelessWidget {
+  const _BottomBar();
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      top: false,
+      child: SizedBox(
+        height: 76,
+        child: BottomAppBar(
+          shape: const CircularNotchedRectangle(),
+          notchMargin: 8,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _BottomItem(
+                icon: Icons.home_outlined,
+                label: 'Início',
+                selected: true,
+                onTap: () {},
+              ),
+              _BottomItem(
+                icon: Icons.receipt_long_outlined,
+                label: 'Registros',
+                onTap: () {},
+              ),
+              const SizedBox(width: 56),
+              _BottomItem(
+                icon: Icons.notifications_none,
+                label: 'Alertas',
+                onTap: () {},
+              ),
+              _BottomItem(
+                icon: Icons.directions_car_filled_outlined,
+                label: 'Veículos',
+                onTap: () {
+                  Navigator.pushNamed(context, '/veiculos');
+                },
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
@@ -552,6 +458,8 @@ class _BottomItem extends StatelessWidget {
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
         onTap: onTap,
+        mouseCursor: SystemMouseCursors.click,
+        splashFactory: InkRipple.splashFactory,
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
           child: Column(
@@ -559,14 +467,7 @@ class _BottomItem extends StatelessWidget {
             children: [
               Icon(icon, color: color),
               const SizedBox(height: 2),
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 11,
-                  color: color,
-                  fontWeight: selected ? FontWeight.bold : FontWeight.normal,
-                ),
-              ),
+              Text(label, style: TextStyle(fontSize: 11, color: color)),
             ],
           ),
         ),
@@ -575,10 +476,9 @@ class _BottomItem extends StatelessWidget {
   }
 }
 
-/// ====== DONUT CHART (CustomPaint) ======
-
+/// ====== DONUT CHART ======
 class DonutSegment {
-  final double value; // 0..1 (proporção)
+  final double value;
   final Color color;
   DonutSegment({required this.value, required this.color});
 }
@@ -586,7 +486,7 @@ class DonutSegment {
 class DonutChart extends StatelessWidget {
   final List<DonutSegment> segments;
   final double thickness;
-  final double gap; // espaço entre arcos
+  final double gap;
   const DonutChart({
     super.key,
     required this.segments,
@@ -615,7 +515,7 @@ class _DonutPainter extends CustomPainter {
     final center = rect.center;
     final radius = math.min(size.width, size.height) / 2 - 8;
 
-    var start = -math.pi / 2; // começa no topo
+    var start = -math.pi / 2;
     for (final s in segments) {
       final sweep = s.value * 2 * math.pi - _gapAngle(radius);
       final paint = Paint()
@@ -628,15 +528,11 @@ class _DonutPainter extends CustomPainter {
       start += s.value * 2 * math.pi;
     }
 
-    // “furo” interno
     final innerPaint = Paint()..color = Colors.white;
     canvas.drawCircle(center, radius - thickness / 2, innerPaint);
   }
 
-  double _gapAngle(double r) {
-    // converte o gap em ângulo aproximado
-    return gap / r;
-  }
+  double _gapAngle(double r) => gap / r;
 
   @override
   bool shouldRepaint(covariant _DonutPainter oldDelegate) =>

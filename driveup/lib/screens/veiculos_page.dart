@@ -87,62 +87,32 @@ class _VeiculosPageState extends State<VeiculosPage> {
 
           if (snapshot.hasError) {
             return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Text(
-                  'Erro ao carregar veículos:\n${snapshot.error}',
-                  textAlign: TextAlign.center,
-                ),
+              child: Text(
+                'Erro ao carregar veículos:\n${snapshot.error}',
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: Colors.redAccent),
               ),
             );
           }
 
           final veiculos = snapshot.data ?? [];
 
-          if (veiculos.isEmpty) {
-            return ListView(
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              children: [
-                const _SectionTitle('VEÍCULOS'),
-                const SizedBox(height: 16),
-                const Text(
-                  'Você ainda não cadastrou nenhum veículo.',
-                  style: TextStyle(color: Colors.black54),
-                ),
-                const SizedBox(height: 16),
-                Center(
-                  child: SizedBox(
-                    width: 250,
-                    height: 40,
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: yellow,
-                        foregroundColor: Colors.black87,
-                        shape: const StadiumBorder(),
-                        elevation: 1.5,
-                      ),
-                      onPressed: () {
-                        Navigator.pushNamed(context, '/formVeiculo');
-                      },
-                      child: const Text(
-                        'ADICIONAR VEÍCULO',
-                        style: TextStyle(
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: .4,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 40),
-              ],
-            );
-          }
-
           return ListView(
             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             children: [
               const _SectionTitle('VEÍCULOS'),
+
+              // mensagem quando não tem nenhum veículo
+              if (veiculos.isEmpty)
+                const Padding(
+                  padding: EdgeInsets.only(bottom: 8),
+                  child: Text(
+                    'Você ainda não cadastrou nenhum veículo.',
+                    style: TextStyle(color: Colors.black54),
+                  ),
+                ),
+
+              // cards dos veículos (quando tiver)
               for (final v in veiculos)
                 VehicleCard(
                   icon: v.type == 'Moto'
@@ -154,14 +124,47 @@ class _VeiculosPageState extends State<VeiculosPage> {
                   cor: v.color,
                   marca: v.brand,
                   onEdit: () {
-                    Navigator.pushNamed(context, '/formVeiculo', arguments: v);
+                    // abrir o form já preenchido
+                    Navigator.pushNamed(
+                      context,
+                      '/formVeiculo',
+                      arguments: v, // se você estiver passando o modelo Vehicle
+                    );
                   },
-                  onDelete: () => _confirmarExclusao(v),
                   onTap: () {
-                    // futuro: detalhes
+                    // se quiser abrir detalhes do veículo depois
                   },
                 ),
-              const SizedBox(height: 40),
+
+              const SizedBox(height: 8),
+
+              // 👇 BOTÃO QUE NÃO SOME MAIS
+              Center(
+                child: SizedBox(
+                  width: 250,
+                  height: 40,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFFFFC107),
+                      foregroundColor: Colors.black87,
+                      shape: const StadiumBorder(),
+                      elevation: 1.5,
+                    ),
+                    onPressed: () {
+                      Navigator.pushNamed(context, '/formVeiculo');
+                    },
+                    child: const Text(
+                      'ADICIONAR VEÍCULO',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: .4,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 90),
             ],
           );
         },

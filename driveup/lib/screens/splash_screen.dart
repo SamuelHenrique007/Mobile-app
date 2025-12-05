@@ -40,9 +40,9 @@ class _SplashScreenState extends State<SplashScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // aqui você pode manter o layout que já tinha (logo, fundo, etc)
     return Scaffold(
-      backgroundColor: const Color(0xFF1C1C1C),
+      // 👇 fundo branco em vez de preto
+      backgroundColor: Colors.white,
       body: Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
