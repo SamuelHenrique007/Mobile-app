@@ -26,6 +26,35 @@ class _FormVeiculoPageState extends State<FormVeiculoPage> {
 
   bool _salvando = false;
 
+  Vehicle? _editingVehicle;
+  bool _loadedArgs = false;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_loadedArgs) return;
+
+    final args = ModalRoute.of(context)?.settings.arguments;
+    if (args is Vehicle) {
+      _editingVehicle = args;
+
+      tipo = args.type;
+      marca = args.brand;
+      combustivel = args.fuel;
+
+      _nomeController.text = args.name;
+      _modeloController.text = args.model;
+      _placaController.text = args.plate;
+      _anoController.text = args.year;
+      _tanqueController.text = args.tankVolume;
+      _chassiController.text = args.chassis ?? '';
+      _renavamController.text = args.renavam ?? '';
+      _corController.text = args.color;
+    }
+
+    _loadedArgs = true;
+  }
+
   @override
   void dispose() {
     _nomeController.dispose();
@@ -39,23 +68,82 @@ class _FormVeiculoPageState extends State<FormVeiculoPage> {
     super.dispose();
   }
 
+  Future<void> _salvarVeiculo() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    setState(() => _salvando = true);
+
+    final isEditing = _editingVehicle != null;
+
+    try {
+      final vehicle = Vehicle(
+        id: isEditing ? _editingVehicle!.id : '',
+        type: tipo!,
+        name: _nomeController.text.trim(),
+        brand: marca!,
+        model: _modeloController.text.trim(),
+        year: _anoController.text.trim(),
+        color: _corController.text.trim(),
+        plate: _placaController.text.trim(),
+        fuel: combustivel!,
+        tankVolume: _tanqueController.text.trim(),
+        chassis: _chassiController.text.trim().isEmpty
+            ? null
+            : _chassiController.text.trim(),
+        renavam: _renavamController.text.trim().isEmpty
+            ? null
+            : _renavamController.text.trim(),
+      );
+
+      if (isEditing) {
+        await VehicleService.instance.updateVehicle(vehicle);
+      } else {
+        await VehicleService.instance.addVehicle(vehicle);
+      }
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            isEditing
+                ? 'Veículo atualizado com sucesso!'
+                : 'Veículo salvo com sucesso!',
+          ),
+        ),
+      );
+
+      Navigator.pop(context);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Erro ao salvar veículo: $e')));
+    } finally {
+      if (mounted) {
+        setState(() => _salvando = false);
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     const yellow = Color(0xFFFFC107);
+    final isEditing = _editingVehicle != null;
 
     return Scaffold(
-      extendBody: true,
+      // sem bottom bar e sem FAB – quem cuida disso é o MainNavigation
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: .5,
         leading: IconButton(
-          icon: const Icon(Icons.menu, color: Colors.black87),
-          onPressed: () {},
+          icon: const Icon(Icons.arrow_back, color: Colors.black87),
+          onPressed: () => Navigator.pop(context),
         ),
         centerTitle: true,
-        title: const Text(
-          'INICIO',
-          style: TextStyle(color: Colors.black87, letterSpacing: 1),
+        title: Text(
+          isEditing ? 'EDITAR VEÍCULO' : 'NOVO VEÍCULO',
+          style: const TextStyle(color: Colors.black87, letterSpacing: 1),
         ),
         actions: const [
           Padding(
@@ -189,71 +277,18 @@ class _FormVeiculoPageState extends State<FormVeiculoPage> {
                           height: 18,
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
-                      : const Text(
-                          'SALVAR',
-                          style: TextStyle(fontWeight: FontWeight.bold),
+                      : Text(
+                          isEditing ? 'ATUALIZAR' : 'SALVAR',
+                          style: const TextStyle(fontWeight: FontWeight.bold),
                         ),
                 ),
               ),
             ),
-            const SizedBox(height: 90),
+            const SizedBox(height: 24),
           ],
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: yellow,
-        onPressed: () {},
-        child: const Icon(Icons.add, color: Colors.black87),
-      ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
-      bottomNavigationBar: const _BottomBarVeiculosSelected(),
     );
-  }
-
-  Future<void> _salvarVeiculo() async {
-    if (!_formKey.currentState!.validate()) return;
-
-    setState(() => _salvando = true);
-
-    try {
-      final vehicle = Vehicle(
-        id: '',
-        type: tipo!,
-        name: _nomeController.text.trim(),
-        brand: marca!,
-        model: _modeloController.text.trim(),
-        year: _anoController.text.trim(),
-        color: _corController.text.trim(),
-        plate: _placaController.text.trim(),
-        fuel: combustivel!,
-        tankVolume: _tanqueController.text.trim(),
-        chassis: _chassiController.text.trim().isEmpty
-            ? null
-            : _chassiController.text.trim(),
-        renavam: _renavamController.text.trim().isEmpty
-            ? null
-            : _renavamController.text.trim(),
-      );
-
-      await VehicleService.instance.addVehicle(vehicle);
-
-      if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Veículo salvo com sucesso!')),
-      );
-
-      Navigator.pop(context);
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Erro ao salvar veículo: $e')));
-    } finally {
-      if (mounted) {
-        setState(() => _salvando = false);
-      }
-    }
   }
 }
 
@@ -360,96 +395,6 @@ class _SectionTitle extends StatelessWidget {
           fontSize: 16,
           fontWeight: FontWeight.w600,
           color: Colors.black87,
-        ),
-      ),
-    );
-  }
-}
-
-/// ---------- Bottom bar ----------
-class _BottomBarVeiculosSelected extends StatelessWidget {
-  const _BottomBarVeiculosSelected();
-
-  @override
-  Widget build(BuildContext context) {
-    return SafeArea(
-      top: false,
-      child: SizedBox(
-        height: 76,
-        child: BottomAppBar(
-          shape: const CircularNotchedRectangle(),
-          notchMargin: 8,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _BottomItem(
-                icon: Icons.home_outlined,
-                label: 'Início',
-                onTap: () {},
-              ),
-              _BottomItem(
-                icon: Icons.receipt_long_outlined,
-                label: 'Registros',
-                onTap: () {},
-              ),
-              const SizedBox(width: 56),
-              _BottomItem(
-                icon: Icons.notifications_none,
-                label: 'Alertas',
-                onTap: () {},
-              ),
-              _BottomItem(
-                icon: Icons.directions_car_filled_outlined,
-                label: 'Veículos',
-                selected: true,
-                onTap: () {},
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _BottomItem extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final bool selected;
-  final VoidCallback? onTap;
-  const _BottomItem({
-    required this.icon,
-    required this.label,
-    this.selected = false,
-    this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final color = selected ? const Color(0xFFFFC107) : Colors.black54;
-    return Material(
-      type: MaterialType.transparency,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(12),
-        onTap: onTap,
-        mouseCursor: SystemMouseCursors.click,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(icon, color: color),
-              const SizedBox(height: 2),
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 11,
-                  color: color,
-                  fontWeight: selected ? FontWeight.bold : FontWeight.normal,
-                ),
-              ),
-            ],
-          ),
         ),
       ),
     );

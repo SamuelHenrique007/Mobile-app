@@ -17,8 +17,18 @@ class _RelatoriosPageState extends State<RelatoriosPage> {
 
   // ====== NOVO: controle de mês para o centro do gráfico ======
   final List<String> _months = const [
-    'JANEIRO','FEVEREIRO','MARÇO','ABRIL','MAIO','JUNHO',
-    'JULHO','AGOSTO','SETEMBRO','OUTUBRO','NOVEMBRO','DEZEMBRO'
+    'JANEIRO',
+    'FEVEREIRO',
+    'MARÇO',
+    'ABRIL',
+    'MAIO',
+    'JUNHO',
+    'JULHO',
+    'AGOSTO',
+    'SETEMBRO',
+    'OUTUBRO',
+    'NOVEMBRO',
+    'DEZEMBRO',
   ];
   int _monthIndex = 5; // 0=JAN ... 5=JUNHO (exemplo inicial)
 
@@ -65,7 +75,7 @@ class _RelatoriosPageState extends State<RelatoriosPage> {
               backgroundColor: Colors.orange,
               child: Icon(Icons.person, color: Colors.white, size: 18),
             ),
-          )
+          ),
         ],
       ),
       body: ListView(
@@ -107,7 +117,10 @@ class _RelatoriosPageState extends State<RelatoriosPage> {
                     children: [
                       const Spacer(),
                       Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 6,
+                        ),
                         decoration: BoxDecoration(
                           color: Colors.black.withOpacity(.06),
                           borderRadius: BorderRadius.circular(12),
@@ -141,8 +154,17 @@ class _RelatoriosPageState extends State<RelatoriosPage> {
                             GestureDetector(
                               onTap: _prevMonth,
                               child: const Padding(
-                                padding: EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                                child: Text('<', style: TextStyle(fontSize: 16, color: Colors.black87)),
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 6,
+                                ),
+                                child: Text(
+                                  '<',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    color: Colors.black87,
+                                  ),
+                                ),
                               ),
                             ),
                             const SizedBox(width: 12),
@@ -159,8 +181,17 @@ class _RelatoriosPageState extends State<RelatoriosPage> {
                             GestureDetector(
                               onTap: _nextMonth,
                               child: const Padding(
-                                padding: EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                                child: Text('>', style: TextStyle(fontSize: 16, color: Colors.black87)),
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                  vertical: 6,
+                                ),
+                                child: Text(
+                                  '>',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    color: Colors.black87,
+                                  ),
+                                ),
                               ),
                             ),
                           ],
@@ -168,16 +199,32 @@ class _RelatoriosPageState extends State<RelatoriosPage> {
                       ],
                     ),
                   ),
-                  // ==========================================================
 
+                  // ==========================================================
                   const SizedBox(height: 12),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceAround,
                     children: const [
-                      _QuickAction(color: Color(0xFFFFD600), icon: Icons.local_gas_station_outlined, label: 'Abastecimento'),
-                      _QuickAction(color: Color(0xFFFF5252), icon: Icons.receipt_long_outlined, label: 'Despesas'),
-                      _QuickAction(color: Color(0xFF40C4FF), icon: Icons.build_outlined, label: 'Serviço'),
-                      _QuickAction(color: Color(0xFF69F0AE), icon: Icons.attach_money, label: 'Receita'),
+                      _QuickAction(
+                        color: Color(0xFFFFD600),
+                        icon: Icons.local_gas_station_outlined,
+                        label: 'Abastecimento',
+                      ),
+                      _QuickAction(
+                        color: Color(0xFFFF5252),
+                        icon: Icons.receipt_long_outlined,
+                        label: 'Despesas',
+                      ),
+                      _QuickAction(
+                        color: Color(0xFF40C4FF),
+                        icon: Icons.build_outlined,
+                        label: 'Serviço',
+                      ),
+                      _QuickAction(
+                        color: Color(0xFF69F0AE),
+                        icon: Icons.attach_money,
+                        label: 'Receita',
+                      ),
                     ],
                   ),
                 ],
@@ -195,9 +242,6 @@ class _RelatoriosPageState extends State<RelatoriosPage> {
         onPressed: () {},
         child: const Icon(Icons.add, color: Colors.black87, size: 28),
       ),
-
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
-      bottomNavigationBar: const _RelatoriosBottomBar(),
     );
   }
 
@@ -270,10 +314,13 @@ class _ReportChips extends StatelessWidget {
           final (type, label) = items[i];
           final selected = value == type;
           return ChoiceChip(
-            label: Text(label, style: TextStyle(
-              color: selected ? Colors.black87 : Colors.black87,
-              fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
-            )),
+            label: Text(
+              label,
+              style: TextStyle(
+                color: selected ? Colors.black87 : Colors.black87,
+                fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+              ),
+            ),
             selected: selected,
             selectedColor: yellow,
             backgroundColor: Colors.black.withOpacity(.06),
@@ -281,7 +328,9 @@ class _ReportChips extends StatelessWidget {
             onSelected: (_) => onChanged(type),
             showCheckmark: false,
             visualDensity: const VisualDensity(horizontal: -2, vertical: -2),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
           );
         },
       ),
@@ -316,21 +365,40 @@ class _StatTile extends StatelessWidget {
   final String title;
   final String prefix;
   final String value;
-  const _StatTile({required this.title, required this.prefix, required this.value});
+  const _StatTile({
+    required this.title,
+    required this.prefix,
+    required this.value,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Text(title, style: TextStyle(fontSize: 12, color: Colors.black.withOpacity(.65))),
+        Text(
+          title,
+          style: TextStyle(fontSize: 12, color: Colors.black.withOpacity(.65)),
+        ),
         const SizedBox(height: 6),
         RichText(
           text: TextSpan(
             style: const TextStyle(color: Colors.black87),
             children: [
-              TextSpan(text: '$prefix ', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
-              TextSpan(text: value, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+              TextSpan(
+                text: '$prefix ',
+                style: const TextStyle(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              TextSpan(
+                text: value,
+                style: const TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ],
           ),
         ),
@@ -343,64 +411,31 @@ class _QuickAction extends StatelessWidget {
   final Color color;
   final IconData icon;
   final String label;
-  const _QuickAction({required this.color, required this.icon, required this.label});
+  const _QuickAction({
+    required this.color,
+    required this.icon,
+    required this.label,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Column(
       children: [
-        CircleAvatar(radius: 20, backgroundColor: color, child: Icon(icon, color: Colors.black87)),
+        CircleAvatar(
+          radius: 20,
+          backgroundColor: color,
+          child: Icon(icon, color: Colors.black87),
+        ),
         const SizedBox(height: 6),
         SizedBox(
           width: 86,
-          child: Text(label, textAlign: TextAlign.center, style: const TextStyle(fontSize: 11.5)),
-        ),
-      ],
-    );
-  }
-}
-
-class _RelatoriosBottomBar extends StatelessWidget {
-  const _RelatoriosBottomBar();
-
-  @override
-  Widget build(BuildContext context) {
-    return SafeArea(
-      top: false,
-      child: SizedBox(
-        height: 76,
-        child: BottomAppBar(
-          shape: const CircularNotchedRectangle(),
-          notchMargin: 8,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _BottomItem(
-                icon: Icons.home_outlined,
-                label: 'Início',
-                onTap: () {},
-              ),
-              _BottomItem(
-                icon: Icons.receipt_long_outlined,
-                label: 'Registros',
-                selected: true,
-                onTap: () {},
-              ),
-              const SizedBox(width: 56),
-              _BottomItem(
-                icon: Icons.notifications_none,
-                label: 'Alertas',
-                onTap: () {},
-              ),
-              _BottomItem(
-                icon: Icons.directions_car_filled_outlined,
-                label: 'Veículos',
-                onTap: () {},
-              ),
-            ],
+          child: Text(
+            label,
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 11.5),
           ),
         ),
-      ),
+      ],
     );
   }
 }
@@ -433,7 +468,14 @@ class _BottomItem extends StatelessWidget {
             children: [
               Icon(icon, color: color),
               const SizedBox(height: 2),
-              Text(label, style: TextStyle(fontSize: 11, color: color, fontWeight: selected ? FontWeight.bold : FontWeight.normal)),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 11,
+                  color: color,
+                  fontWeight: selected ? FontWeight.bold : FontWeight.normal,
+                ),
+              ),
             ],
           ),
         ),
@@ -533,26 +575,29 @@ class DonutChart extends StatelessWidget {
   final double thickness;
   final double gap; // degrees of gap between segments
 
-  const DonutChart({
-    required this.segments,
-    this.thickness = 16,
-    this.gap = 2,
-  });
+  const DonutChart({required this.segments, this.thickness = 16, this.gap = 2});
 
   @override
   Widget build(BuildContext context) {
     // Parent provides a fixed height (220); make the chart square using that height.
     return LayoutBuilder(
       builder: (context, constraints) {
-        final double size = constraints.maxHeight.isFinite && constraints.maxHeight > 0
+        final double size =
+            constraints.maxHeight.isFinite && constraints.maxHeight > 0
             ? constraints.maxHeight
-            : (constraints.maxWidth.isFinite && constraints.maxWidth > 0 ? constraints.maxWidth : 200);
+            : (constraints.maxWidth.isFinite && constraints.maxWidth > 0
+                  ? constraints.maxWidth
+                  : 200);
         return Center(
           child: SizedBox(
             width: size,
             height: size,
             child: CustomPaint(
-              painter: _DonutPainter(segments: segments, thickness: thickness, gap: gap),
+              painter: _DonutPainter(
+                segments: segments,
+                thickness: thickness,
+                gap: gap,
+              ),
             ),
           ),
         );
@@ -566,7 +611,11 @@ class _DonutPainter extends CustomPainter {
   final double thickness;
   final double gap; // degrees
 
-  _DonutPainter({required this.segments, required this.thickness, required this.gap});
+  _DonutPainter({
+    required this.segments,
+    required this.thickness,
+    required this.gap,
+  });
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -602,6 +651,8 @@ class _DonutPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _DonutPainter old) {
-    return old.segments != segments || old.thickness != thickness || old.gap != gap;
+    return old.segments != segments ||
+        old.thickness != thickness ||
+        old.gap != gap;
   }
 }

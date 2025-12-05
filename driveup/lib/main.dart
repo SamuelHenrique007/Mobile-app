@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
-
 import 'firebase_options.dart';
 
-// Telas
+// telas
 import 'screens/splash_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/cadastro_page.dart';
@@ -17,12 +16,12 @@ import 'screens/form_veiculo_page.dart';
 import 'screens/relatorios_page.dart';
 import 'screens/menu_dev_page.dart';
 
+// navegação global
+import 'navigation/main_navigation.dart';
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
-  // Inicializa o Firebase (usa o arquivo gerado pelo flutterfire)
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-
   runApp(const MyApp());
 }
 
@@ -37,16 +36,13 @@ class MyApp extends StatelessWidget {
       theme: ThemeData(
         useMaterial3: true,
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.amber),
-        scaffoldBackgroundColor: const Color(0xFFF5F5F5),
       ),
 
-      // Para desenvolvimento você pode começar pelo menu
-      // depois, se quiser, troca para '/splash' ou '/login'
-      initialRoute: '/menu',
+      // 👉 Começa pela Splash (ela decide se vai pro login ou pra MainNavigation)
+      home: const SplashScreen(),
 
       routes: {
         '/menu': (context) => const MenuDevPage(),
-        '/splash': (context) => const SplashScreen(),
         '/login': (context) => const LoginScreen(),
         '/cadastro': (context) => const CadastroPage(),
         '/cadastroConfirm': (context) => const CadastroConfirmPage(),
@@ -57,14 +53,8 @@ class MyApp extends StatelessWidget {
         '/veiculos': (context) => const VeiculosPage(),
         '/formVeiculo': (context) => const FormVeiculoPage(),
         '/relatorio': (context) => const RelatoriosPage(),
-      },
-
-      // fallback se chamar uma rota errada
-      onUnknownRoute: (settings) {
-        return MaterialPageRoute(
-          builder: (_) =>
-              const Scaffold(body: Center(child: Text('Rota não encontrada'))),
-        );
+        // rota opcional se quiser chamar MainNavigation por nome
+        '/main': (context) => const MainNavigation(),
       },
     );
   }

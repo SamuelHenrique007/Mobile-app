@@ -90,9 +90,6 @@ class HomePage extends StatelessWidget {
         onPressed: () => _abrirModalAdicionar(context),
         child: const Icon(Icons.add, color: Colors.black87, size: 28),
       ),
-
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
-      bottomNavigationBar: const _BottomBar(),
     );
   }
 }
@@ -528,61 +525,6 @@ class _MiniInfo extends StatelessWidget {
     return Text(
       '$label: $value',
       style: TextStyle(fontSize: 12.5, color: color),
-    );
-  }
-}
-
-/// ====== BOTTOM BAR ======
-
-class _BottomBar extends StatelessWidget {
-  const _BottomBar();
-
-  @override
-  Widget build(BuildContext context) {
-    return SafeArea(
-      top: false,
-      child: SizedBox(
-        height: 76,
-        child: BottomAppBar(
-          shape: const CircularNotchedRectangle(),
-          notchMargin: 8,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _BottomItem(
-                icon: Icons.home_outlined,
-                label: 'Início',
-                selected: true,
-                onTap: () {
-                  Navigator.pushReplacementNamed(context, '/home');
-                },
-              ),
-              _BottomItem(
-                icon: Icons.receipt_long_outlined,
-                label: 'Registros',
-                onTap: () {
-                  Navigator.pushNamed(context, '/relatorio');
-                },
-              ),
-              const SizedBox(width: 56),
-              _BottomItem(
-                icon: Icons.notifications_none,
-                label: 'Alertas',
-                onTap: () {
-                  Navigator.pushNamed(context, '/notificacoes');
-                },
-              ),
-              _BottomItem(
-                icon: Icons.directions_car_filled_outlined,
-                label: 'Veículos',
-                onTap: () {
-                  Navigator.pushNamed(context, '/veiculos');
-                },
-              ),
-            ],
-          ),
-        ),
-      ),
     );
   }
 }

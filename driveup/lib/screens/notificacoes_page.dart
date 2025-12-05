@@ -89,8 +89,6 @@ class NotificacoesPage extends StatelessWidget {
         onPressed: () {},
         child: const Icon(Icons.add, color: Colors.black87),
       ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
-      bottomNavigationBar: const _BottomBar(),
     );
   }
 }
@@ -174,53 +172,6 @@ class NotificationItem extends StatelessWidget {
               ),
             ),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-// ---------- BOTTOM BAR ----------
-
-class _BottomBar extends StatelessWidget {
-  const _BottomBar();
-
-  @override
-  Widget build(BuildContext context) {
-    return SafeArea(
-      top: false,
-      child: SizedBox(
-        height: 76,
-        child: BottomAppBar(
-          shape: const CircularNotchedRectangle(),
-          notchMargin: 8,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _BottomItem(
-                icon: Icons.home_outlined,
-                label: 'Início',
-                onTap: () {},
-              ),
-              _BottomItem(
-                icon: Icons.receipt_long_outlined,
-                label: 'Registros',
-                onTap: () {},
-              ),
-              const SizedBox(width: 56),
-              _BottomItem(
-                icon: Icons.notifications_none,
-                label: 'Alertas',
-                selected: true, // botão ativo em amarelo
-                onTap: () {},
-              ),
-              _BottomItem(
-                icon: Icons.directions_car_filled_outlined,
-                label: 'Veículos',
-                onTap: () {},
-              ),
-            ],
-          ),
         ),
       ),
     );

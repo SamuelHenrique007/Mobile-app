@@ -11,6 +11,46 @@ class VeiculosPage extends StatefulWidget {
 class _VeiculosPageState extends State<VeiculosPage> {
   static const yellow = Color(0xFFFFC107);
 
+  Future<void> _confirmarExclusao(Vehicle v) async {
+    final ok =
+        await showDialog<bool>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: const Text('Excluir veículo'),
+            content: Text('Deseja excluir o veículo "${v.name}"?'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: const Text('Cancelar'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                child: const Text(
+                  'Excluir',
+                  style: TextStyle(color: Colors.redAccent),
+                ),
+              ),
+            ],
+          ),
+        ) ??
+        false;
+
+    if (!ok) return;
+
+    try {
+      await VehicleService.instance.deleteVehicle(v.id);
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Veículo excluído.')));
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Erro ao excluir veículo: $e')));
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -94,7 +134,7 @@ class _VeiculosPageState extends State<VeiculosPage> {
                     ),
                   ),
                 ),
-                const SizedBox(height: 90),
+                const SizedBox(height: 40),
               ],
             );
           }
@@ -114,56 +154,22 @@ class _VeiculosPageState extends State<VeiculosPage> {
                   cor: v.color,
                   marca: v.brand,
                   onEdit: () {
-                    // TODO: abrir tela de edição com dados do veículo
+                    Navigator.pushNamed(context, '/formVeiculo', arguments: v);
                   },
+                  onDelete: () => _confirmarExclusao(v),
                   onTap: () {
-                    // TODO: abrir detalhes do veículo
+                    // futuro: detalhes
                   },
                 ),
-              const SizedBox(height: 8),
-              Center(
-                child: SizedBox(
-                  width: 250,
-                  height: 40,
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: yellow,
-                      foregroundColor: Colors.black87,
-                      shape: const StadiumBorder(),
-                      elevation: 1.5,
-                    ),
-                    onPressed: () {
-                      Navigator.pushNamed(context, '/formVeiculo');
-                    },
-                    child: const Text(
-                      'ADICIONAR VEÍCULO',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: .4,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 90),
+              const SizedBox(height: 40),
             ],
           );
         },
       ),
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: yellow,
-        onPressed: () {
-          Navigator.pushNamed(context, '/formVeiculo');
-        },
-        child: const Icon(Icons.add, color: Colors.black87),
-      ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
-      bottomNavigationBar: const _BottomBarVeiculosSelected(),
     );
   }
 }
 
-/// Simple section title used in the list
 class _SectionTitle extends StatelessWidget {
   final String title;
   const _SectionTitle(this.title, {super.key});
@@ -185,7 +191,6 @@ class _SectionTitle extends StatelessWidget {
   }
 }
 
-/// ---------- Card do veículo ----------
 class VehicleCard extends StatelessWidget {
   final IconData icon;
   final String titulo;
@@ -194,6 +199,7 @@ class VehicleCard extends StatelessWidget {
   final String cor;
   final String marca;
   final VoidCallback? onEdit;
+  final VoidCallback? onDelete;
   final VoidCallback? onTap;
 
   const VehicleCard({
@@ -205,6 +211,7 @@ class VehicleCard extends StatelessWidget {
     required this.cor,
     required this.marca,
     this.onEdit,
+    this.onDelete,
     this.onTap,
   });
 
@@ -251,13 +258,29 @@ class VehicleCard extends StatelessWidget {
                   ],
                 ),
               ),
-              IconButton(
-                tooltip: 'Editar',
-                onPressed: onEdit,
-                icon: const Icon(Icons.edit_outlined, size: 18),
-                color: Colors.black54,
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(),
+              PopupMenuButton<String>(
+                onSelected: (value) {
+                  if (value == 'edit') {
+                    onEdit?.call();
+                  } else if (value == 'delete') {
+                    onDelete?.call();
+                  }
+                },
+                itemBuilder: (context) => const [
+                  PopupMenuItem(value: 'edit', child: Text('Editar')),
+                  PopupMenuItem(
+                    value: 'delete',
+                    child: Text(
+                      'Excluir',
+                      style: TextStyle(color: Colors.redAccent),
+                    ),
+                  ),
+                ],
+                icon: const Icon(
+                  Icons.more_vert,
+                  size: 20,
+                  color: Colors.black54,
+                ),
               ),
             ],
           ),
@@ -270,96 +293,6 @@ class VehicleCard extends StatelessWidget {
     return Text(
       '$label: $value',
       style: TextStyle(fontSize: 12.5, color: color),
-    );
-  }
-}
-
-/// ---------- Bottom bar com “Veículos” selecionado ----------
-class _BottomBarVeiculosSelected extends StatelessWidget {
-  const _BottomBarVeiculosSelected();
-
-  @override
-  Widget build(BuildContext context) {
-    return SafeArea(
-      top: false,
-      child: SizedBox(
-        height: 76,
-        child: BottomAppBar(
-          shape: const CircularNotchedRectangle(),
-          notchMargin: 8,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _BottomItem(
-                icon: Icons.home_outlined,
-                label: 'Início',
-                onTap: () {},
-              ),
-              _BottomItem(
-                icon: Icons.receipt_long_outlined,
-                label: 'Registros',
-                onTap: () {},
-              ),
-              const SizedBox(width: 56),
-              _BottomItem(
-                icon: Icons.notifications_none,
-                label: 'Alertas',
-                onTap: () {},
-              ),
-              _BottomItem(
-                icon: Icons.directions_car_filled_outlined,
-                label: 'Veículos',
-                selected: true, // amarelo
-                onTap: () {},
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _BottomItem extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final bool selected;
-  final VoidCallback? onTap;
-  const _BottomItem({
-    required this.icon,
-    required this.label,
-    this.selected = false,
-    this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final color = selected ? const Color(0xFFFFC107) : Colors.black54;
-    return Material(
-      type: MaterialType.transparency,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(12),
-        onTap: onTap,
-        mouseCursor: SystemMouseCursors.click,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(icon, color: color),
-              const SizedBox(height: 2),
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 11,
-                  color: color,
-                  fontWeight: selected ? FontWeight.bold : FontWeight.normal,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
     );
   }
 }

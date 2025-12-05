@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:driveup/services/auth_service.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:driveup/navigation/main_navigation.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -32,7 +33,9 @@ class _LoginScreenState extends State<LoginScreen> {
       );
 
       if (user != null) {
-        Navigator.pushReplacementNamed(context, '/home');
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => const MainNavigation()),
+        );
       }
     } on FirebaseAuthException catch (e) {
       _showSnack(e.message ?? 'Erro ao entrar');

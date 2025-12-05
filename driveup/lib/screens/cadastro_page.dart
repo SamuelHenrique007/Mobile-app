@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:driveup/navigation/main_navigation.dart';
 
 class CadastroPage extends StatefulWidget {
   const CadastroPage({super.key});
@@ -51,8 +52,11 @@ class _CadastroPageState extends State<CadastroPage> {
 
       _showSnack('Cadastro realizado com sucesso!');
       // 3. Vai para a Home já logado
+      // 3. Vai para o app principal (com bottom bar)
       if (mounted) {
-        Navigator.pushReplacementNamed(context, '/home');
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => const MainNavigation()),
+        );
       }
     } on FirebaseAuthException catch (e) {
       print('❌ FirebaseAuthException: ${e.code} - ${e.message}');
