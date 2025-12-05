@@ -22,14 +22,19 @@ class _CadastroConfirmPageState extends State<CadastroConfirmPage> {
   Future<void> _verificar() async {
     setState(() => _loadingVerificar = true);
     try {
-      final user = await _authService.reloadUser();
-      if (user != null && user.emailVerified) {
-        _showSnack('E-mail verificado com sucesso!');
-        Navigator.pushReplacementNamed(context, '/home');
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        await user.reload();
+        if (user.emailVerified) {
+          _showSnack('E-mail verificado com sucesso!');
+          Navigator.pushReplacementNamed(context, '/home');
+        } else {
+          _showSnack(
+            'E-mail ainda não verificado. Confira sua caixa de entrada.',
+          );
+        }
       } else {
-        _showSnack(
-          'E-mail ainda não verificado. Confira sua caixa de entrada.',
-        );
+        _showSnack('Nenhum usuário logado.');
       }
     } catch (e) {
       _showSnack('Erro ao verificar: $e');

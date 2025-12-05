@@ -84,10 +84,10 @@ class HomePage extends StatelessWidget {
       ),
       floatingActionButton: FloatingActionButton(
         shape: const CircleBorder(),
-        clipBehavior: Clip.antiAlias, // borda lisa
+        clipBehavior: Clip.antiAlias,
         backgroundColor: const Color(0xFFFFC107),
         elevation: 3,
-        onPressed: () {},
+        onPressed: () => _abrirModalAdicionar(context),
         child: const Icon(Icons.add, color: Colors.black87, size: 28),
       ),
 
@@ -95,6 +95,16 @@ class HomePage extends StatelessWidget {
       bottomNavigationBar: const _BottomBar(),
     );
   }
+}
+
+void _abrirModalAdicionar(BuildContext context) {
+  showModalBottomSheet(
+    context: context,
+    backgroundColor: Colors.transparent,
+    barrierColor: Colors.black.withOpacity(0.6),
+    isScrollControlled: false,
+    builder: (_) => const _AddOptionsModal(),
+  );
 }
 
 class _SectionTitle extends StatelessWidget {
@@ -298,6 +308,142 @@ class SummaryAction extends StatelessWidget {
   }
 }
 
+/// ====== MODAL ADICIONAR ======
+
+class _AddOptionsModal extends StatelessWidget {
+  const _AddOptionsModal({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Align(
+          alignment: Alignment.topLeft,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'ADICIONAR',
+                style: TextStyle(
+                  color: Colors.white70,
+                  fontSize: 12,
+                  letterSpacing: 1.2,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Container(
+                width: 220,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(14),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.25),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    _AddOptionTile(
+                      icon: Icons.local_gas_station,
+                      label: 'Abastecimento',
+                      onTap: () {
+                        Navigator.pop(context);
+                        // TODO: navegar para tela de Abastecimento
+                      },
+                    ),
+                    const Divider(height: 1),
+                    _AddOptionTile(
+                      icon: Icons.receipt_long,
+                      label: 'Despesa',
+                      onTap: () {
+                        Navigator.pop(context);
+                        // TODO: navegar para tela de Despesa
+                      },
+                    ),
+                    const Divider(height: 1),
+                    _AddOptionTile(
+                      icon: Icons.attach_money,
+                      label: 'Receita',
+                      onTap: () {
+                        Navigator.pop(context);
+                      },
+                    ),
+                    const Divider(height: 1),
+                    _AddOptionTile(
+                      icon: Icons.build,
+                      label: 'Serviço',
+                      onTap: () {
+                        Navigator.pop(context);
+                      },
+                    ),
+                    const Divider(height: 1),
+                    _AddOptionTile(
+                      icon: Icons.alt_route,
+                      label: 'Percurso',
+                      onTap: () {
+                        Navigator.pop(context);
+                      },
+                    ),
+                    const Divider(height: 1),
+                    _AddOptionTile(
+                      icon: Icons.notifications_active_outlined,
+                      label: 'Lembrete',
+                      onTap: () {
+                        Navigator.pop(context);
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _AddOptionTile extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  const _AddOptionTile({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+    super.key,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+        child: Row(
+          children: [
+            Icon(icon, size: 20, color: Colors.black87),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                label,
+                style: const TextStyle(fontSize: 14, color: Colors.black87),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 /// ====== VEÍCULOS ======
 
 class VehicleCard extends StatelessWidget {
@@ -408,26 +554,30 @@ class _BottomBar extends StatelessWidget {
                 label: 'Início',
                 selected: true,
                 onTap: () {
-                  // TODO: navegar para Início
+                  Navigator.pushReplacementNamed(context, '/home');
                 },
               ),
               _BottomItem(
                 icon: Icons.receipt_long_outlined,
                 label: 'Registros',
                 onTap: () {
-                  // TODO: navegar para Registros
+                  Navigator.pushNamed(context, '/relatorio');
                 },
               ),
-              const SizedBox(width: 56), // espaço do FAB
+              const SizedBox(width: 56),
               _BottomItem(
                 icon: Icons.notifications_none,
                 label: 'Alertas',
-                onTap: () {},
+                onTap: () {
+                  Navigator.pushNamed(context, '/notificacoes');
+                },
               ),
               _BottomItem(
                 icon: Icons.directions_car_filled_outlined,
                 label: 'Veículos',
-                onTap: () {},
+                onTap: () {
+                  Navigator.pushNamed(context, '/veiculos');
+                },
               ),
             ],
           ),
@@ -460,8 +610,6 @@ class _BottomItem extends StatelessWidget {
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
         onTap: onTap,
-        mouseCursor: SystemMouseCursors.click,
-        splashFactory: InkRipple.splashFactory,
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
           child: Column(
@@ -469,7 +617,14 @@ class _BottomItem extends StatelessWidget {
             children: [
               Icon(icon, color: color),
               const SizedBox(height: 2),
-              Text(label, style: TextStyle(fontSize: 11, color: color)),
+              Text(
+                label,
+                style: TextStyle(
+                  fontSize: 11,
+                  color: color,
+                  fontWeight: selected ? FontWeight.bold : FontWeight.normal,
+                ),
+              ),
             ],
           ),
         ),

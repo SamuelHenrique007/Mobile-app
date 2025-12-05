@@ -1,31 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:driveup/services/vehicle_service.dart';
 
-class VeiculosPage extends StatelessWidget {
+class VeiculosPage extends StatefulWidget {
   const VeiculosPage({super.key});
 
   @override
+  State<VeiculosPage> createState() => _VeiculosPageState();
+}
+
+class _VeiculosPageState extends State<VeiculosPage> {
+  static const yellow = Color(0xFFFFC107);
+
+  @override
   Widget build(BuildContext context) {
-    const yellow = Color(0xFFFFC107);
-
-    final veiculos = const [
-      _Vehicle(
-        icon: Icons.directions_car_outlined,
-        titulo: 'Jetta - Branco',
-        modelo: 'Jetta',
-        ano: '2018',
-        cor: 'Branco',
-        marca: 'Volkswagen',
-      ),
-      _Vehicle(
-        icon: Icons.motorcycle_outlined,
-        titulo: 'Titan 160 - Vermelho',
-        modelo: 'Titan',
-        ano: '2022',
-        cor: 'Vermelho',
-        marca: 'Honda',
-      ),
-    ];
-
     return Scaffold(
       extendBody: true,
       appBar: AppBar(
@@ -51,57 +38,122 @@ class VeiculosPage extends StatelessWidget {
           ),
         ],
       ),
-      body: ListView(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        children: [
-          const _SectionTitle('VEÍCULOS'),
-          for (final v in veiculos)
-            VehicleCard(
-              icon: v.icon,
-              titulo: v.titulo,
-              modelo: v.modelo,
-              ano: v.ano,
-              cor: v.cor,
-              marca: v.marca,
-              onEdit: () {
-                // TODO: abrir tela de edição
-              },
-              onTap: () {
-                // TODO: abrir detalhes do veículo
-              },
-            ),
-          const SizedBox(height: 8),
-          Center(
-            child: SizedBox(
-              width: 250,
-              height: 40,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: yellow,
-                  foregroundColor: Colors.black87,
-                  shape: const StadiumBorder(),
-                  elevation: 1.5,
+      body: StreamBuilder<List<Vehicle>>(
+        stream: VehicleService.instance.vehiclesStream(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+
+          if (snapshot.hasError) {
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Text(
+                  'Erro ao carregar veículos:\n${snapshot.error}',
+                  textAlign: TextAlign.center,
                 ),
-                onPressed: () {
-                  // TODO: abrir formulário para adicionar veículo
-                },
-                child: const Text(
-                  'ADICIONAR VEÍCULO',
-                  style: TextStyle(
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: .4,
+              ),
+            );
+          }
+
+          final veiculos = snapshot.data ?? [];
+
+          if (veiculos.isEmpty) {
+            return ListView(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              children: [
+                const _SectionTitle('VEÍCULOS'),
+                const SizedBox(height: 16),
+                const Text(
+                  'Você ainda não cadastrou nenhum veículo.',
+                  style: TextStyle(color: Colors.black54),
+                ),
+                const SizedBox(height: 16),
+                Center(
+                  child: SizedBox(
+                    width: 250,
+                    height: 40,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: yellow,
+                        foregroundColor: Colors.black87,
+                        shape: const StadiumBorder(),
+                        elevation: 1.5,
+                      ),
+                      onPressed: () {
+                        Navigator.pushNamed(context, '/formVeiculo');
+                      },
+                      child: const Text(
+                        'ADICIONAR VEÍCULO',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: .4,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 90),
+              ],
+            );
+          }
+
+          return ListView(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            children: [
+              const _SectionTitle('VEÍCULOS'),
+              for (final v in veiculos)
+                VehicleCard(
+                  icon: v.type == 'Moto'
+                      ? Icons.motorcycle_outlined
+                      : Icons.directions_car_outlined,
+                  titulo: v.name,
+                  modelo: v.model,
+                  ano: v.year,
+                  cor: v.color,
+                  marca: v.brand,
+                  onEdit: () {
+                    // TODO: abrir tela de edição com dados do veículo
+                  },
+                  onTap: () {
+                    // TODO: abrir detalhes do veículo
+                  },
+                ),
+              const SizedBox(height: 8),
+              Center(
+                child: SizedBox(
+                  width: 250,
+                  height: 40,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: yellow,
+                      foregroundColor: Colors.black87,
+                      shape: const StadiumBorder(),
+                      elevation: 1.5,
+                    ),
+                    onPressed: () {
+                      Navigator.pushNamed(context, '/formVeiculo');
+                    },
+                    child: const Text(
+                      'ADICIONAR VEÍCULO',
+                      style: TextStyle(
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: .4,
+                      ),
+                    ),
                   ),
                 ),
               ),
-            ),
-          ),
-          const SizedBox(height: 90),
-        ],
+              const SizedBox(height: 90),
+            ],
+          );
+        },
       ),
       floatingActionButton: FloatingActionButton(
         backgroundColor: yellow,
         onPressed: () {
-          // mesmo atalho do botão acima, se quiser
+          Navigator.pushNamed(context, '/formVeiculo');
         },
         child: const Icon(Icons.add, color: Colors.black87),
       ),
@@ -310,23 +362,4 @@ class _BottomItem extends StatelessWidget {
       ),
     );
   }
-}
-
-/// ---------- Modelo simples (mock) ----------
-class _Vehicle {
-  final IconData icon;
-  final String titulo;
-  final String modelo;
-  final String ano;
-  final String cor;
-  final String marca;
-
-  const _Vehicle({
-    required this.icon,
-    required this.titulo,
-    required this.modelo,
-    required this.ano,
-    required this.cor,
-    required this.marca,
-  });
 }

@@ -1,6 +1,6 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:driveup/services/auth_service.dart'; // ajuste o import se o nome do pacote for outro
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class CadastroPage extends StatefulWidget {
   const CadastroPage({super.key});
@@ -18,8 +18,6 @@ class _CadastroPageState extends State<CadastroPage> {
   final _formKey = GlobalKey<FormState>();
   bool _loading = false;
 
-  final _authService = AuthService();
-
   void _showSnack(String msg) {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
   }
@@ -28,24 +26,56 @@ class _CadastroPageState extends State<CadastroPage> {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => _loading = true);
+    print('🟡 Iniciando cadastro...');
+
     try {
-      final user = await _authService.register(
-        name: _nomeController.text.trim(),
+      // 1. Criar usuário no Firebase Auth
+      final cred = await FirebaseAuth.instance.createUserWithEmailAndPassword(
         email: _emailController.text.trim(),
         password: _senhaController.text.trim(),
       );
 
+      final user = cred.user;
+      print('✅ Usuário criado: ${user?.uid}');
+
+      // 2. Salvar dados básicos no Firestore
       if (user != null) {
-        _showSnack('Cadastro realizado! Verifique seu e-mail.');
-        // Vai para tela de confirmação
-        Navigator.pushNamed(context, '/cadastroConfirm');
+        await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
+          'name': _nomeController.text.trim(),
+          'email': _emailController.text.trim(),
+          'createdAt': FieldValue.serverTimestamp(),
+        });
+
+        print('✅ Usuário salvo no Firestore');
+      }
+
+      _showSnack('Cadastro realizado com sucesso!');
+      // 3. Vai para a Home já logado
+      if (mounted) {
+        Navigator.pushReplacementNamed(context, '/home');
       }
     } on FirebaseAuthException catch (e) {
-      _showSnack(e.message ?? 'Erro ao cadastrar');
+      print('❌ FirebaseAuthException: ${e.code} - ${e.message}');
+      String msg = 'Erro ao cadastrar';
+
+      if (e.code == 'email-already-in-use') {
+        msg = 'Este e-mail já está em uso.';
+      } else if (e.code == 'invalid-email') {
+        msg = 'E-mail inválido.';
+      } else if (e.code == 'weak-password') {
+        msg = 'Senha muito fraca (mínimo 6 caracteres).';
+      }
+
+      _showSnack(msg);
     } catch (e) {
+      print('❌ Erro inesperado: $e');
       _showSnack('Erro inesperado: $e');
     } finally {
-      setState(() => _loading = false);
+      // GARANTE que o loading some sempre
+      if (mounted) {
+        setState(() => _loading = false);
+      }
+      print('🔵 Finalizou cadastro (com sucesso ou erro).');
     }
   }
 
@@ -76,7 +106,6 @@ class _CadastroPageState extends State<CadastroPage> {
               key: _formKey,
               child: Column(
                 children: [
-                  // Logo
                   Image.asset('assets/images/driveup_logo.png', height: 120),
                   const SizedBox(height: 10),
                   const Text(
@@ -89,7 +118,6 @@ class _CadastroPageState extends State<CadastroPage> {
                   ),
                   const SizedBox(height: 30),
 
-                  // NOME
                   _campoDecorado(
                     iconPath: 'assets/icons/email.png',
                     hint: 'Digite seu nome',
@@ -99,7 +127,6 @@ class _CadastroPageState extends State<CadastroPage> {
                   ),
                   const SizedBox(height: 15),
 
-                  // EMAIL
                   _campoDecorado(
                     iconPath: 'assets/icons/email.png',
                     hint: 'Digite seu email',
@@ -113,7 +140,6 @@ class _CadastroPageState extends State<CadastroPage> {
                   ),
                   const SizedBox(height: 15),
 
-                  // SENHA
                   _campoDecorado(
                     iconPath: 'assets/icons/senha.png',
                     hint: 'Digite sua senha',
@@ -127,7 +153,6 @@ class _CadastroPageState extends State<CadastroPage> {
                   ),
                   const SizedBox(height: 15),
 
-                  // CONFIRMA SENHA
                   _campoDecorado(
                     iconPath: 'assets/icons/senha.png',
                     hint: 'Digite novamente sua senha',
@@ -159,14 +184,14 @@ class _CadastroPageState extends State<CadastroPage> {
                       Image.asset('assets/icons/apple.png', height: 30),
                     ],
                   ),
-
                   const SizedBox(height: 30),
 
-                  // Botão continuar
                   ElevatedButton(
                     onPressed: _loading ? null : _cadastrar,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFFFFC107),
+                      backgroundColor: _loading
+                          ? Colors.grey[300]
+                          : const Color(0xFFFFC107),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(30),
                       ),

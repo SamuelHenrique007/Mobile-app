@@ -32,15 +32,6 @@ class _LoginScreenState extends State<LoginScreen> {
       );
 
       if (user != null) {
-        if (!user.emailVerified) {
-          _showSnack(
-            'E-mail ainda não verificado. Verifique sua caixa de entrada.',
-          );
-          Navigator.pushNamed(context, '/cadastroConfirm');
-          return;
-        }
-
-        // Login OK → vai para home
         Navigator.pushReplacementNamed(context, '/home');
       }
     } on FirebaseAuthException catch (e) {
@@ -48,7 +39,7 @@ class _LoginScreenState extends State<LoginScreen> {
     } catch (e) {
       _showSnack('Erro inesperado: $e');
     } finally {
-      setState(() => _loading = false);
+      if (mounted) setState(() => _loading = false);
     }
   }
 

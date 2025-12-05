@@ -5,7 +5,7 @@ class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _db = FirebaseFirestore.instance;
 
-  /// Cadastrar usuário com nome, email e senha
+  /// Cadastro simples: cria usuário no Auth e salva no Firestore
   Future<User?> register({
     required String name,
     required String email,
@@ -17,22 +17,19 @@ class AuthService {
     );
 
     final user = cred.user;
+
     if (user != null) {
-      // Salva dados básicos no Firestore
       await _db.collection('users').doc(user.uid).set({
         'name': name,
         'email': email,
         'createdAt': FieldValue.serverTimestamp(),
       });
-
-      // Envia e-mail de verificação
-      await user.sendEmailVerification();
     }
 
     return user;
   }
 
-  /// Login com email e senha
+  /// Login com email/senha
   Future<User?> login({required String email, required String password}) async {
     final cred = await _auth.signInWithEmailAndPassword(
       email: email,
@@ -41,21 +38,9 @@ class AuthService {
     return cred.user;
   }
 
-  /// Logout
   Future<void> logout() async {
     await _auth.signOut();
   }
 
-  /// Usuário logado atualmente (pode ser null)
   User? get currentUser => _auth.currentUser;
-
-  /// Recarrega o usuário (útil pra ver se email foi verificado)
-  Future<User?> reloadUser() async {
-    final user = _auth.currentUser;
-    if (user != null) {
-      await user.reload();
-      return _auth.currentUser;
-    }
-    return null;
-  }
 }
