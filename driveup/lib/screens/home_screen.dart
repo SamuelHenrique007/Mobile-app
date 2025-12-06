@@ -97,8 +97,8 @@ class HomePage extends StatelessWidget {
             }
           }
 
-          children.add(const SizedBox(height: 32));
-
+          // dá um espaço extra para a área da bottom bar + FAB
+          children.add(const SizedBox(height: 120));
           return ListView(
             padding: const EdgeInsets.symmetric(horizontal: 12),
             children: children,

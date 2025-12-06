@@ -9,8 +9,6 @@ class VeiculosPage extends StatefulWidget {
 }
 
 class _VeiculosPageState extends State<VeiculosPage> {
-  static const yellow = Color(0xFFFFC107);
-
   Future<void> _confirmarExclusao(Vehicle v) async {
     final ok =
         await showDialog<bool>(
@@ -40,14 +38,39 @@ class _VeiculosPageState extends State<VeiculosPage> {
     try {
       await VehicleService.instance.deleteVehicle(v.id);
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Veículo excluído.')));
+
+      // ✅ SnackBar flutuante (não empurra FAB / bottom bar)
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Veículo excluído.'),
+          behavior: SnackBarBehavior.floating,
+          margin: const EdgeInsets.only(
+            left: 16,
+            right: 16,
+            bottom: kBottomNavigationBarHeight + 16,
+          ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+      );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Erro ao excluir veículo: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Erro ao excluir veículo: $e'),
+          behavior: SnackBarBehavior.floating,
+          margin: const EdgeInsets.only(
+            left: 16,
+            right: 16,
+            bottom: kBottomNavigationBarHeight + 16,
+          ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          backgroundColor: Colors.red.shade700,
+        ),
+      );
     }
   }
 
@@ -102,7 +125,6 @@ class _VeiculosPageState extends State<VeiculosPage> {
             children: [
               const _SectionTitle('VEÍCULOS'),
 
-              // mensagem quando não tem nenhum veículo
               if (veiculos.isEmpty)
                 const Padding(
                   padding: EdgeInsets.only(bottom: 8),
@@ -112,7 +134,6 @@ class _VeiculosPageState extends State<VeiculosPage> {
                   ),
                 ),
 
-              // cards dos veículos (quando tiver)
               for (final v in veiculos)
                 VehicleCard(
                   icon: v.type == 'Moto'
@@ -124,21 +145,20 @@ class _VeiculosPageState extends State<VeiculosPage> {
                   cor: v.color,
                   marca: v.brand,
                   onEdit: () {
-                    // abrir o form já preenchido
                     Navigator.pushNamed(
                       context,
                       '/formVeiculo',
-                      arguments: v, // se você estiver passando o modelo Vehicle
+                      arguments: v, // passa o Vehicle para edição
                     );
                   },
+                  onDelete: () => _confirmarExclusao(v),
                   onTap: () {
-                    // se quiser abrir detalhes do veículo depois
+                    // se quiser abrir detalhes depois
                   },
                 ),
 
               const SizedBox(height: 8),
 
-              // 👇 BOTÃO QUE NÃO SOME MAIS
               Center(
                 child: SizedBox(
                   width: 250,

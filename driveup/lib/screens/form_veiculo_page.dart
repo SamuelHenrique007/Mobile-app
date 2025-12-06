@@ -103,6 +103,7 @@ class _FormVeiculoPageState extends State<FormVeiculoPage> {
 
       if (!mounted) return;
 
+      // ✅ SnackBar flutuante (não empurra o FAB / bottom bar)
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
@@ -110,15 +111,36 @@ class _FormVeiculoPageState extends State<FormVeiculoPage> {
                 ? 'Veículo atualizado com sucesso!'
                 : 'Veículo salvo com sucesso!',
           ),
+          behavior: SnackBarBehavior.floating,
+          margin: const EdgeInsets.only(
+            left: 16,
+            right: 16,
+            bottom: kBottomNavigationBarHeight + 16,
+          ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
         ),
       );
 
       Navigator.pop(context);
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Erro ao salvar veículo: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Erro ao salvar veículo: $e'),
+          behavior: SnackBarBehavior.floating,
+          margin: const EdgeInsets.only(
+            left: 16,
+            right: 16,
+            bottom: kBottomNavigationBarHeight + 16,
+          ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          backgroundColor: Colors.red.shade700,
+        ),
+      );
     } finally {
       if (mounted) {
         setState(() => _salvando = false);
