@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'dart:math' as math;
 
-import 'package:driveup/services/vehicle_service.dart'; // 👈 backend de veículos
+import 'package:driveup/services/vehicle_service.dart';
+import 'package:driveup/screens/sidemenu_page.dart'; // 👈 backend de veículos
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
@@ -14,7 +15,11 @@ class HomePage extends StatelessWidget {
         elevation: 0.2,
         leading: IconButton(
           icon: const Icon(Icons.menu, color: Colors.black87),
-          onPressed: () {},
+          onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const SideMenuPage()),
+              );
+          },
         ),
         centerTitle: true,
         title: const Text(

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:driveup/screens/sidemenu_page.dart';
 
 class PerfilPage extends StatefulWidget {
   const PerfilPage({super.key});
@@ -35,7 +36,11 @@ class _ProfilePageState extends State<PerfilPage> {
         elevation: .5,
         leading: IconButton(
           icon: const Icon(Icons.menu, color: Colors.black87),
-          onPressed: () {},
+          onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const SideMenuPage()),
+              );
+          },
         ),
         centerTitle: true,
         title: const Text(

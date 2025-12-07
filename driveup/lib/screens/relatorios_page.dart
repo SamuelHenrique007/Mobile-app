@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:driveup/screens/sidemenu_page.dart';
 
 // Se o DonutChart estiver em outro arquivo, importe.
 // import 'donut_chart.dart';
@@ -60,7 +61,11 @@ class _RelatoriosPageState extends State<RelatoriosPage> {
         elevation: .5,
         leading: IconButton(
           icon: const Icon(Icons.menu, color: Colors.black87),
-          onPressed: () {},
+          onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const SideMenuPage()),
+              );
+          },
         ),
         centerTitle: true,
         title: const Text(

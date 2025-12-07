@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:driveup/services/vehicle_service.dart';
+import 'package:driveup/screens/sidemenu_page.dart';
 
 class VeiculosPage extends StatefulWidget {
   const VeiculosPage({super.key});
@@ -83,7 +84,11 @@ class _VeiculosPageState extends State<VeiculosPage> {
         elevation: .5,
         leading: IconButton(
           icon: const Icon(Icons.menu, color: Colors.black87),
-          onPressed: () {},
+          onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const SideMenuPage()),
+              );
+          },
         ),
         centerTitle: true,
         title: const Text(
