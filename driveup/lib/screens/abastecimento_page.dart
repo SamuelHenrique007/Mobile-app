@@ -9,27 +9,74 @@ class AbastecimentoPage extends StatefulWidget {
 }
 
 class _AbastecimentoPageState extends State<AbastecimentoPage> {
-  final _dateCtrl = TextEditingController(text: '04/11/2025');
-  final _timeCtrl = TextEditingController(text: '22:59');
+  final _dateCtrl = TextEditingController();
+  final _timeCtrl = TextEditingController();
   final _odometerCtrl = TextEditingController();
-  final _fuelPriceCtrl = TextEditingController(text: '4,49');
-  final _totalPriceCtrl = TextEditingController();
-  final _litersCtrl = TextEditingController();
+  final _fuelPriceCtrl = TextEditingController();   // valor do litro
+  final _totalPriceCtrl = TextEditingController();  // valor total em R$
+  final _litersCtrl = TextEditingController();      // litros
   final _stationCtrl = TextEditingController();
 
   String _fuelType = 'Gasolina';
   final _fuelTypes = ['Gasolina', 'Etanol', 'Diesel', 'GNV'];
 
   @override
+  void initState() {
+    super.initState();
+    // sempre que mudar valor do litro ou valor total, recalcula litros
+    _fuelPriceCtrl.addListener(_recalculateLiters);
+    _totalPriceCtrl.addListener(_recalculateLiters);
+  }
+
+  @override
   void dispose() {
     _dateCtrl.dispose();
     _timeCtrl.dispose();
     _odometerCtrl.dispose();
+    _fuelPriceCtrl.removeListener(_recalculateLiters);
     _fuelPriceCtrl.dispose();
+    _totalPriceCtrl.removeListener(_recalculateLiters);
     _totalPriceCtrl.dispose();
     _litersCtrl.dispose();
     _stationCtrl.dispose();
     super.dispose();
+  }
+
+  /// Converte número no estilo brasileiro "4,49" -> 4.49
+  double? _parseBrNumber(String text) {
+    if (text.trim().isEmpty) return null;
+    var cleaned = text.trim();
+
+    // remove separador de milhar simples: 1.234,56 -> 1234,56
+    cleaned = cleaned.replaceAll('.', '');
+    // troca vírgula por ponto: 1234,56 -> 1234.56
+    cleaned = cleaned.replaceAll(',', '.');
+
+    return double.tryParse(cleaned);
+  }
+
+  /// Recalcula automaticamente o campo "Litros" quando
+  /// "Valor combustível" e "Valor total" forem preenchidos
+  void _recalculateLiters() {
+    final price = _parseBrNumber(_fuelPriceCtrl.text);  // valor por litro
+    final total = _parseBrNumber(_totalPriceCtrl.text); // quanto pagou
+
+    if (price == null || price <= 0 || total == null) {
+      // se faltar dado ou der zero, limpa litros
+      if (_litersCtrl.text.isNotEmpty) {
+        _litersCtrl.text = '';
+      }
+      return;
+    }
+
+    final liters = total / price;
+
+    // formata com 2 casas e vírgula: 12.34 -> "12,34"
+    final formatted = liters.toStringAsFixed(2).replaceAll('.', ',');
+
+    if (_litersCtrl.text != formatted) {
+      _litersCtrl.text = formatted;
+    }
   }
 
   @override
@@ -41,16 +88,12 @@ class _AbastecimentoPageState extends State<AbastecimentoPage> {
         backgroundColor: Colors.white,
         elevation: .5,
         leading: IconButton(
-          icon: const Icon(Icons.menu, color: Colors.black87),
-          onPressed: () {
-             Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const SideMenuPage()),
-            );
-          },
+          icon: const Icon(Icons.arrow_back, color: Colors.black87),
+          onPressed: () => Navigator.pop(context),
         ),
         centerTitle: true,
         title: const Text(
-          'INICIO',
+          'NOVO ABASTECIMENTO',
           style: TextStyle(
             color: Colors.black87,
             letterSpacing: 1,
@@ -240,14 +283,12 @@ class _AbastecimentoPageState extends State<AbastecimentoPage> {
   }
 
   void _onSave() {
-    // TODO: salvar no backend / firestore / api
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Abastecimento salvo!')),
     );
+    Navigator.pop(context); 
   }
 }
-
-/// ====== widgets reutilizáveis ======
 
 class _GreyField extends StatelessWidget {
   final TextEditingController controller;
