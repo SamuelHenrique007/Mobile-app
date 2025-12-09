@@ -1,16 +1,28 @@
 import 'package:flutter/material.dart';
-import 'package:driveup/screens/sidemenu_page.dart';
-import 'package:driveup/services/vehicle_service.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 import 'package:driveup/services/fuel_service.dart';
+import 'package:driveup/services/vehicle_service.dart';
 
 class AbastecimentoPage extends StatefulWidget {
-  const AbastecimentoPage({super.key});
+  /// null = novo abastecimento
+  final String? fuelId;
+
+  /// Dados iniciais para edição (vêm do VehicleHistoryPage)
+  final Map<String, dynamic>? initialData;
+
+  const AbastecimentoPage({super.key, this.fuelId, this.initialData});
 
   @override
   State<AbastecimentoPage> createState() => _AbastecimentoPageState();
 }
 
 class _AbastecimentoPageState extends State<AbastecimentoPage> {
+  static const yellow = Color(0xFFFFC107);
+
+  final _formKey = GlobalKey<FormState>();
+
+  // Controllers
   final _dateCtrl = TextEditingController();
   final _timeCtrl = TextEditingController();
   final _odometerCtrl = TextEditingController();
@@ -19,17 +31,79 @@ class _AbastecimentoPageState extends State<AbastecimentoPage> {
   final _litersCtrl = TextEditingController(); // litros
   final _stationCtrl = TextEditingController();
 
+  DateTime? _selectedDate;
+  TimeOfDay? _selectedTime;
+  bool _isSaving = false;
+
+  // Tipo de combustível
   String _fuelType = 'Gasolina';
   final _fuelTypes = ['Gasolina', 'Etanol', 'Diesel', 'GNV'];
 
+  // Veículo selecionado
   String? _selectedVehicleId;
-  bool _isSaving = false;
 
   @override
   void initState() {
     super.initState();
+
+    // listeners para recalcular litros
     _fuelPriceCtrl.addListener(_recalculateLiters);
     _totalPriceCtrl.addListener(_recalculateLiters);
+
+    _loadInitialData();
+  }
+
+  void _loadInitialData() {
+    final data = widget.initialData;
+    if (data == null) return;
+
+    // vehicleId
+    _selectedVehicleId = data['vehicleId'] as String?;
+
+    // tipo de combustível
+    final fuelTypeRaw = data['fuelType'] as String?;
+    if (fuelTypeRaw != null && _fuelTypes.contains(fuelTypeRaw)) {
+      _fuelType = fuelTypeRaw;
+    }
+
+    // valores numéricos
+    final odometer = data['odometer'];
+    if (odometer is num) {
+      _odometerCtrl.text = odometer.toString().replaceAll('.', ',');
+    }
+
+    final pricePerLiter = data['pricePerLiter'];
+    if (pricePerLiter is num) {
+      _fuelPriceCtrl.text = pricePerLiter.toString().replaceAll('.', ',');
+    }
+
+    final totalPrice = data['totalPrice'];
+    if (totalPrice is num) {
+      _totalPriceCtrl.text = totalPrice.toString().replaceAll('.', ',');
+    }
+
+    final liters = data['liters'];
+    if (liters is num) {
+      _litersCtrl.text = liters.toString().replaceAll('.', ',');
+    }
+
+    // posto
+    _stationCtrl.text = (data['station'] ?? '').toString();
+
+    // data/hora
+    final dtRaw = data['dateTime'];
+    DateTime? dt;
+    if (dtRaw is Timestamp) dt = dtRaw.toDate();
+    if (dtRaw is DateTime) dt = dtRaw;
+
+    if (dt != null) {
+      _selectedDate = dt;
+      _selectedTime = TimeOfDay.fromDateTime(dt);
+      _dateCtrl.text =
+          '${dt.day.toString().padLeft(2, '0')}/${dt.month.toString().padLeft(2, '0')}/${dt.year}';
+      _timeCtrl.text =
+          '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+    }
   }
 
   @override
@@ -37,10 +111,13 @@ class _AbastecimentoPageState extends State<AbastecimentoPage> {
     _dateCtrl.dispose();
     _timeCtrl.dispose();
     _odometerCtrl.dispose();
+
     _fuelPriceCtrl.removeListener(_recalculateLiters);
     _fuelPriceCtrl.dispose();
+
     _totalPriceCtrl.removeListener(_recalculateLiters);
     _totalPriceCtrl.dispose();
+
     _litersCtrl.dispose();
     _stationCtrl.dispose();
     super.dispose();
@@ -50,15 +127,20 @@ class _AbastecimentoPageState extends State<AbastecimentoPage> {
   double? _parseBrNumber(String text) {
     if (text.trim().isEmpty) return null;
     var cleaned = text.trim();
+
+    // remove separador de milhar: 1.234,56 -> 1234,56
     cleaned = cleaned.replaceAll('.', '');
+    // troca vírgula por ponto: 1234,56 -> 1234.56
     cleaned = cleaned.replaceAll(',', '.');
+
     return double.tryParse(cleaned);
   }
 
-  /// Recalcula litros = total / preço
+  /// Recalcula automaticamente o campo "Litros" quando
+  /// "Valor combustível" e "Valor total" forem preenchidos
   void _recalculateLiters() {
-    final price = _parseBrNumber(_fuelPriceCtrl.text);
-    final total = _parseBrNumber(_totalPriceCtrl.text);
+    final price = _parseBrNumber(_fuelPriceCtrl.text); // valor por litro
+    final total = _parseBrNumber(_totalPriceCtrl.text); // quanto pagou
 
     if (price == null || price <= 0 || total == null) {
       if (_litersCtrl.text.isNotEmpty) {
@@ -68,6 +150,7 @@ class _AbastecimentoPageState extends State<AbastecimentoPage> {
     }
 
     final liters = total / price;
+
     final formatted = liters.toStringAsFixed(2).replaceAll('.', ',');
 
     if (_litersCtrl.text != formatted) {
@@ -75,38 +158,50 @@ class _AbastecimentoPageState extends State<AbastecimentoPage> {
     }
   }
 
-  DateTime _buildDateTimeFromFields() {
+  DateTime _buildDateTime() {
     final now = DateTime.now();
+    final date = _selectedDate ?? now;
+    final time = _selectedTime ?? TimeOfDay.fromDateTime(now);
+    return DateTime(date.year, date.month, date.day, time.hour, time.minute);
+  }
 
-    int day = now.day;
-    int month = now.month;
-    int year = now.year;
-
-    if (_dateCtrl.text.isNotEmpty) {
-      final parts = _dateCtrl.text.split('/');
-      if (parts.length == 3) {
-        day = int.tryParse(parts[0]) ?? day;
-        month = int.tryParse(parts[1]) ?? month;
-        year = int.tryParse(parts[2]) ?? year;
-      }
+  Future<void> _pickDate() async {
+    final now = DateTime.now();
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _selectedDate ?? now,
+      firstDate: DateTime(now.year - 5),
+      lastDate: DateTime(now.year + 5),
+    );
+    if (picked != null) {
+      setState(() {
+        _selectedDate = picked;
+        _dateCtrl.text =
+            '${picked.day.toString().padLeft(2, '0')}/${picked.month.toString().padLeft(2, '0')}/${picked.year}';
+      });
     }
+  }
 
-    int hour = now.hour;
-    int minute = now.minute;
-
-    if (_timeCtrl.text.isNotEmpty) {
-      final parts = _timeCtrl.text.split(':');
-      if (parts.length == 2) {
-        hour = int.tryParse(parts[0]) ?? hour;
-        minute = int.tryParse(parts[1]) ?? minute;
-      }
+  Future<void> _pickTime() async {
+    final now = TimeOfDay.now();
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: _selectedTime ?? now,
+    );
+    if (picked != null) {
+      setState(() {
+        _selectedTime = picked;
+        _timeCtrl.text =
+            '${picked.hour.toString().padLeft(2, '0')}:${picked.minute.toString().padLeft(2, '0')}';
+      });
     }
-
-    return DateTime(year, month, day, hour, minute);
   }
 
   Future<void> _onSave() async {
     if (_isSaving) return;
+
+    final isValid = _formKey.currentState?.validate() ?? false;
+    if (!isValid) return;
 
     if (_selectedVehicleId == null) {
       ScaffoldMessenger.of(
@@ -115,49 +210,68 @@ class _AbastecimentoPageState extends State<AbastecimentoPage> {
       return;
     }
 
-    final totalPrice = _parseBrNumber(_totalPriceCtrl.text);
-    final liters = _parseBrNumber(_litersCtrl.text);
-
-    if (totalPrice == null || liters == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Informe valor total e litros (ou valor do litro).'),
-        ),
-      );
-      return;
-    }
-
     setState(() => _isSaving = true);
 
     try {
-      final dateTime = _buildDateTimeFromFields();
-      final pricePerLiter = _parseBrNumber(_fuelPriceCtrl.text);
+      final dateTime = _buildDateTime();
+
       final odometer = _parseBrNumber(_odometerCtrl.text);
+      final pricePerLiter = _parseBrNumber(_fuelPriceCtrl.text);
+      final totalPrice = _parseBrNumber(_totalPriceCtrl.text);
+      final liters = _parseBrNumber(_litersCtrl.text);
       final station = _stationCtrl.text.trim().isEmpty
           ? null
           : _stationCtrl.text.trim();
 
-      await FuelService.instance.createFuel(
-        vehicleId: _selectedVehicleId!,
-        dateTime: dateTime,
-        fuelType: _fuelType,
-        odometer: odometer,
-        pricePerLiter: pricePerLiter,
-        totalPrice: totalPrice,
-        liters: liters,
-        station: station,
-      );
+      if (widget.fuelId == null) {
+        // novo
+        await FuelService.instance.createFuel(
+          vehicleId: _selectedVehicleId!,
+          dateTime: dateTime,
+          fuelType: _fuelType,
+          odometer: odometer,
+          pricePerLiter: pricePerLiter,
+          totalPrice: totalPrice,
+          liters: liters,
+          station: station,
+        );
+      } else {
+        // edição
+        await FuelService.instance.updateFuel(
+          id: widget.fuelId!,
+          vehicleId: _selectedVehicleId!,
+          dateTime: dateTime,
+          fuelType: _fuelType,
+          odometer: odometer,
+          pricePerLiter: pricePerLiter,
+          totalPrice: totalPrice,
+          liters: liters,
+          station: station,
+        );
+      }
 
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Abastecimento salvo com sucesso!')),
+        SnackBar(
+          behavior: SnackBarBehavior.floating,
+          elevation: 0,
+          content: Text(
+            widget.fuelId == null
+                ? 'Abastecimento salvo com sucesso!'
+                : 'Abastecimento atualizado com sucesso!',
+          ),
+        ),
       );
       Navigator.pop(context);
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erro ao salvar abastecimento: $e')),
+        SnackBar(
+          behavior: SnackBarBehavior.floating,
+          elevation: 0,
+          content: Text('Erro ao salvar abastecimento: $e'),
+        ),
       );
     } finally {
       if (mounted) {
@@ -168,7 +282,7 @@ class _AbastecimentoPageState extends State<AbastecimentoPage> {
 
   @override
   Widget build(BuildContext context) {
-    const yellow = Color(0xFFFFC107);
+    final isEdit = widget.fuelId != null;
 
     return Scaffold(
       appBar: AppBar(
@@ -179,9 +293,9 @@ class _AbastecimentoPageState extends State<AbastecimentoPage> {
           onPressed: () => Navigator.pop(context),
         ),
         centerTitle: true,
-        title: const Text(
-          'NOVO ABASTECIMENTO',
-          style: TextStyle(
+        title: Text(
+          isEdit ? 'EDITAR ABASTECIMENTO' : 'NOVO ABASTECIMENTO',
+          style: const TextStyle(
             color: Colors.black87,
             letterSpacing: 1,
             fontWeight: FontWeight.w600,
@@ -198,260 +312,243 @@ class _AbastecimentoPageState extends State<AbastecimentoPage> {
           ),
         ],
       ),
-      body: ListView(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        children: [
-          const SizedBox(height: 4),
-          const Text(
-            'ABASTECIMENTO',
-            style: TextStyle(
-              fontSize: 16,
-              letterSpacing: .5,
-              fontWeight: FontWeight.w600,
-              color: Colors.black87,
+      body: Form(
+        key: _formKey,
+        child: ListView(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          children: [
+            const SizedBox(height: 4),
+            const Text(
+              'ABASTECIMENTO',
+              style: TextStyle(
+                fontSize: 16,
+                letterSpacing: .5,
+                fontWeight: FontWeight.w600,
+                color: Colors.black87,
+              ),
             ),
-          ),
-          const SizedBox(height: 16),
+            const SizedBox(height: 16),
 
-          // ===== VEÍCULO =====
-          const Text(
-            'VEÍCULO',
-            style: TextStyle(
-              fontSize: 13,
-              letterSpacing: .5,
-              fontWeight: FontWeight.w500,
-              color: Colors.black87,
+            // ===== VEÍCULO =====
+            const Text(
+              'VEÍCULO',
+              style: TextStyle(
+                fontSize: 13,
+                letterSpacing: .5,
+                fontWeight: FontWeight.w500,
+                color: Colors.black87,
+              ),
             ),
-          ),
-          const SizedBox(height: 8),
-          StreamBuilder<List<Vehicle>>(
-            stream: VehicleService.instance.vehiclesStream(),
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 8),
-                  child: LinearProgressIndicator(minHeight: 2),
-                );
-              }
+            const SizedBox(height: 8),
+            StreamBuilder<List<Vehicle>>(
+              stream: VehicleService.instance.vehiclesStream(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 8),
+                    child: LinearProgressIndicator(minHeight: 2),
+                  );
+                }
 
-              if (snapshot.hasError) {
-                return Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                  child: Text(
-                    'Erro ao carregar veículos: ${snapshot.error}',
-                    style: const TextStyle(color: Colors.redAccent),
-                  ),
-                );
-              }
-
-              final vehicles = snapshot.data ?? [];
-
-              if (vehicles.isEmpty) {
-                return const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 8),
-                  child: Text(
-                    'Você ainda não cadastrou nenhum veículo.',
-                    style: TextStyle(color: Colors.black54, fontSize: 13),
-                  ),
-                );
-              }
-
-              return Container(
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade200,
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                padding: const EdgeInsets.symmetric(horizontal: 10),
-                child: DropdownButtonFormField<String>(
-                  value: _selectedVehicleId,
-                  decoration: const InputDecoration(
-                    icon: Icon(
-                      Icons.directions_car_filled_outlined,
-                      size: 20,
-                      color: Colors.black54,
+                if (snapshot.hasError) {
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    child: Text(
+                      'Erro ao carregar veículos: ${snapshot.error}',
+                      style: const TextStyle(color: Colors.redAccent),
                     ),
-                    border: InputBorder.none,
-                    hintText: 'Selecione o veículo',
+                  );
+                }
+
+                final vehicles = snapshot.data ?? [];
+                if (vehicles.isEmpty) {
+                  return const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 8),
+                    child: Text(
+                      'Você ainda não cadastrou nenhum veículo.',
+                      style: TextStyle(color: Colors.black54, fontSize: 13),
+                    ),
+                  );
+                }
+
+                return Container(
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade200,
+                    borderRadius: BorderRadius.circular(14),
                   ),
-                  items: vehicles
-                      .map(
-                        (v) => DropdownMenuItem<String>(
-                          value: v.id,
-                          child: Text(v.name),
-                        ),
-                      )
-                      .toList(),
-                  onChanged: (value) {
-                    setState(() {
-                      _selectedVehicleId = value;
-                    });
-                  },
-                ),
-              );
-            },
-          ),
-          const SizedBox(height: 16),
-
-          // Linha 1: Data / Hora
-          Row(
-            children: [
-              Expanded(
-                child: _GreyField(
-                  controller: _dateCtrl,
-                  icon: Icons.event,
-                  hint: 'Data',
-                  readOnly: true,
-                  onTap: _pickDate,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _GreyField(
-                  controller: _timeCtrl,
-                  icon: Icons.access_time,
-                  hint: 'Hora',
-                  readOnly: true,
-                  onTap: _pickTime,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-
-          // Linha 2: Tipo combustível / Hodômetro
-          Row(
-            children: [
-              Expanded(
-                child: _GreyDropdown(
-                  icon: Icons.local_gas_station_outlined,
-                  value: _fuelType,
-                  items: _fuelTypes,
-                  onChanged: (v) {
-                    if (v != null) setState(() => _fuelType = v);
-                  },
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _GreyField(
-                  controller: _odometerCtrl,
-                  icon: Icons.speed,
-                  hint: 'Odômetro',
-                  keyboardType: TextInputType.number,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-
-          // Linha 3: valor combust., valor total, litros
-          Row(
-            children: [
-              Expanded(
-                child: _GreyField(
-                  controller: _fuelPriceCtrl,
-                  icon: Icons.local_gas_station,
-                  hint: 'Valor combustível',
-                  keyboardType: const TextInputType.numberWithOptions(
-                    decimal: true,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _GreyField(
-                  controller: _totalPriceCtrl,
-                  icon: Icons.attach_money,
-                  hint: 'Valor total',
-                  keyboardType: const TextInputType.numberWithOptions(
-                    decimal: true,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _GreyField(
-                  controller: _litersCtrl,
-                  icon: Icons.local_drink_outlined,
-                  hint: 'Litros',
-                  keyboardType: const TextInputType.numberWithOptions(
-                    decimal: true,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-
-          // Linha 4: Posto (full width)
-          _GreyField(
-            controller: _stationCtrl,
-            icon: Icons.local_gas_station,
-            hint: 'Posto',
-          ),
-
-          const SizedBox(height: 32),
-
-          // Botão SALVAR
-          Center(
-            child: SizedBox(
-              width: 220,
-              height: 44,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: yellow,
-                  foregroundColor: Colors.black87,
-                  shape: const StadiumBorder(),
-                  elevation: 1.5,
-                ),
-                onPressed: _isSaving ? null : _onSave,
-                child: _isSaving
-                    ? const SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Text(
-                        'SALVAR',
-                        style: TextStyle(
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: .6,
-                        ),
+                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                  child: DropdownButtonFormField<String>(
+                    value: _selectedVehicleId,
+                    decoration: const InputDecoration(
+                      icon: Icon(
+                        Icons.directions_car_filled_outlined,
+                        size: 20,
+                        color: Colors.black54,
                       ),
+                      border: InputBorder.none,
+                      hintText: 'Selecione o veículo',
+                    ),
+                    items: vehicles
+                        .map(
+                          (v) => DropdownMenuItem<String>(
+                            value: v.id,
+                            child: Text(v.name),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (value) {
+                      setState(() {
+                        _selectedVehicleId = value;
+                      });
+                    },
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return 'Selecione o veículo';
+                      }
+                      return null;
+                    },
+                  ),
+                );
+              },
+            ),
+            const SizedBox(height: 16),
+
+            // ===== Linha 1: Data / Hora =====
+            Row(
+              children: [
+                Expanded(
+                  child: _GreyField(
+                    controller: _dateCtrl,
+                    icon: Icons.event,
+                    hint: 'Data',
+                    readOnly: true,
+                    onTap: _pickDate,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _GreyField(
+                    controller: _timeCtrl,
+                    icon: Icons.access_time,
+                    hint: 'Hora',
+                    readOnly: true,
+                    onTap: _pickTime,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+
+            // ===== Linha 2: Tipo combustível / Hodômetro =====
+            Row(
+              children: [
+                Expanded(
+                  child: _GreyDropdown(
+                    icon: Icons.local_gas_station_outlined,
+                    value: _fuelType,
+                    items: _fuelTypes,
+                    onChanged: (v) {
+                      if (v != null) {
+                        setState(() => _fuelType = v);
+                      }
+                    },
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _GreyField(
+                    controller: _odometerCtrl,
+                    icon: Icons.speed,
+                    hint: 'Odômetro',
+                    keyboardType: TextInputType.number,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+
+            // ===== Linha 3: valor combust., valor total, litros =====
+            Row(
+              children: [
+                Expanded(
+                  child: _GreyField(
+                    controller: _fuelPriceCtrl,
+                    icon: Icons.local_gas_station,
+                    hint: 'Valor combustível',
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _GreyField(
+                    controller: _totalPriceCtrl,
+                    icon: Icons.attach_money,
+                    hint: 'Valor total',
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _GreyField(
+                    controller: _litersCtrl,
+                    icon: Icons.local_drink_outlined,
+                    hint: 'Litros',
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+
+            // ===== Linha 4: Posto =====
+            _GreyField(
+              controller: _stationCtrl,
+              icon: Icons.local_gas_station,
+              hint: 'Posto',
+            ),
+
+            const SizedBox(height: 32),
+
+            // Botão SALVAR / ATUALIZAR
+            Center(
+              child: SizedBox(
+                width: 220,
+                height: 44,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: yellow,
+                    foregroundColor: Colors.black87,
+                    shape: const StadiumBorder(),
+                    elevation: 1.5,
+                  ),
+                  onPressed: _isSaving ? null : _onSave,
+                  child: _isSaving
+                      ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : Text(
+                          isEdit ? 'ATUALIZAR' : 'SALVAR',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: .6,
+                          ),
+                        ),
+                ),
               ),
             ),
-          ),
-          const SizedBox(height: 24),
-        ],
+            const SizedBox(height: 24),
+          ],
+        ),
       ),
     );
-  }
-
-  Future<void> _pickDate() async {
-    final now = DateTime.now();
-    final picked = await showDatePicker(
-      context: context,
-      initialDate: now,
-      firstDate: DateTime(now.year - 5),
-      lastDate: DateTime(now.year + 5),
-    );
-    if (picked != null) {
-      setState(() {
-        _dateCtrl.text =
-            '${picked.day.toString().padLeft(2, '0')}/${picked.month.toString().padLeft(2, '0')}/${picked.year}';
-      });
-    }
-  }
-
-  Future<void> _pickTime() async {
-    final now = TimeOfDay.now();
-    final picked = await showTimePicker(context: context, initialTime: now);
-    if (picked != null) {
-      setState(() {
-        _timeCtrl.text =
-            '${picked.hour.toString().padLeft(2, '0')}:${picked.minute.toString().padLeft(2, '0')}';
-      });
-    }
   }
 }
 
@@ -462,6 +559,8 @@ class _GreyField extends StatelessWidget {
   final TextInputType? keyboardType;
   final bool readOnly;
   final VoidCallback? onTap;
+  final String? Function(String?)? validator;
+  final int maxLines;
 
   const _GreyField({
     required this.controller,
@@ -470,15 +569,19 @@ class _GreyField extends StatelessWidget {
     this.keyboardType,
     this.readOnly = false,
     this.onTap,
+    this.validator,
+    this.maxLines = 1,
   });
 
   @override
   Widget build(BuildContext context) {
-    return TextField(
+    return TextFormField(
       controller: controller,
       readOnly: readOnly,
       keyboardType: keyboardType,
       onTap: onTap,
+      validator: validator,
+      maxLines: maxLines,
       decoration: InputDecoration(
         hintText: hint,
         prefixIcon: Icon(icon, size: 20, color: Colors.black54),

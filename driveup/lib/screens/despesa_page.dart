@@ -1,9 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 import 'package:driveup/services/expense_service.dart';
 import 'package:driveup/services/vehicle_service.dart';
 
 class DespesaPage extends StatefulWidget {
-  const DespesaPage({super.key});
+  final String? expenseId;
+  final Map<String, dynamic>? initialData;
+
+  const DespesaPage({super.key, this.expenseId, this.initialData});
 
   @override
   State<DespesaPage> createState() => _DespesaPageState();
@@ -14,11 +19,10 @@ class _DespesaPageState extends State<DespesaPage> {
 
   final _formKey = GlobalKey<FormState>();
 
-  // Controllers
   final _dateCtrl = TextEditingController();
   final _timeCtrl = TextEditingController();
   final _odometerCtrl = TextEditingController();
-  final _valueCtrl = TextEditingController(); // 👈 valor da despesa
+  final _valueCtrl = TextEditingController();
   final _localCtrl = TextEditingController();
   final _obsCtrl = TextEditingController();
 
@@ -27,7 +31,6 @@ class _DespesaPageState extends State<DespesaPage> {
 
   bool _isSaving = false;
 
-  // Dropdowns fixos
   final List<String> _expenseTypes = [
     'Combustível',
     'Manutenção',
@@ -35,18 +38,56 @@ class _DespesaPageState extends State<DespesaPage> {
     'Estacionamento',
     'Outros',
   ];
-  final List<String> _paymentMethods = [
-    'Dinheiro',
-    'Cartão Crédito',
-    'Cartão Débito',
-    'Pix',
-  ];
 
   String? _selectedExpenseType;
-  String? _selectedPaymentMethod;
-
-  // Veículo
   String? _selectedVehicleId;
+
+  /// Agora o método de pagamento é apenas interno (sem campo na tela)
+  String _paymentMethod = 'Não informado';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadInitialData();
+  }
+
+  void _loadInitialData() {
+    final data = widget.initialData;
+    if (data == null) return;
+
+    _selectedVehicleId = data['vehicleId'] as String?;
+    _selectedExpenseType = data['expenseType'] as String?;
+
+    final odometer = data['odometer'];
+    if (odometer is num) {
+      _odometerCtrl.text = odometer.toString().replaceAll('.', ',');
+    }
+
+    final value = data['value'];
+    if (value is num) {
+      _valueCtrl.text = value.toString().replaceAll('.', ',');
+    }
+
+    _localCtrl.text = (data['local'] ?? '').toString();
+    _obsCtrl.text = (data['observation'] ?? '').toString();
+
+    // mantém o método de pagamento salvo, mas sem opção na UI
+    _paymentMethod = (data['paymentMethod'] as String?) ?? 'Não informado';
+
+    final dtRaw = data['dateTime'];
+    DateTime? dt;
+    if (dtRaw is Timestamp) dt = dtRaw.toDate();
+    if (dtRaw is DateTime) dt = dtRaw;
+
+    if (dt != null) {
+      _selectedDate = dt;
+      _selectedTime = TimeOfDay.fromDateTime(dt);
+      _dateCtrl.text =
+          '${dt.day.toString().padLeft(2, '0')}/${dt.month.toString().padLeft(2, '0')}/${dt.year}';
+      _timeCtrl.text =
+          '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
+    }
+  }
 
   @override
   void dispose() {
@@ -97,7 +138,6 @@ class _DespesaPageState extends State<DespesaPage> {
     final now = DateTime.now();
     final date = _selectedDate ?? now;
     final time = _selectedTime ?? TimeOfDay.fromDateTime(now);
-
     return DateTime(date.year, date.month, date.day, time.hour, time.minute);
   }
 
@@ -114,10 +154,12 @@ class _DespesaPageState extends State<DespesaPage> {
       return;
     }
 
-    if (_selectedExpenseType == null || _selectedPaymentMethod == null) {
+    if (_selectedExpenseType == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Preencha tipo de despesa e forma de pagamento.'),
+        SnackBar(
+          behavior: SnackBarBehavior.floating,
+          elevation: 0,
+          content: const Text('Preencha o tipo de despesa.'),
         ),
       );
       return;
@@ -132,33 +174,61 @@ class _DespesaPageState extends State<DespesaPage> {
         _odometerCtrl.text,
       );
       final value = ExpenseService.instance.parseBrDouble(_valueCtrl.text);
-
       final dateTime = _buildDateTime();
 
-      await ExpenseService.instance.createExpense(
-        vehicleId: _selectedVehicleId!,
-        dateTime: dateTime,
-        expenseType: _selectedExpenseType!,
-        local: _localCtrl.text.trim(),
-        driver: 'Não informado', // 👈 campo mantido no backend, fixo
-        paymentMethod: _selectedPaymentMethod!,
-        observation: _obsCtrl.text.trim().isEmpty ? null : _obsCtrl.text.trim(),
-        odometer: odometer,
-        value: value,
-      );
+      if (widget.expenseId == null) {
+        await ExpenseService.instance.createExpense(
+          vehicleId: _selectedVehicleId!,
+          dateTime: dateTime,
+          expenseType: _selectedExpenseType!,
+          local: _localCtrl.text.trim(),
+          paymentMethod: _paymentMethod,
+          observation: _obsCtrl.text.trim().isEmpty
+              ? null
+              : _obsCtrl.text.trim(),
+          odometer: odometer,
+          value: value,
+        );
+      } else {
+        await ExpenseService.instance.updateExpense(
+          id: widget.expenseId!,
+          vehicleId: _selectedVehicleId!,
+          dateTime: dateTime,
+          expenseType: _selectedExpenseType!,
+          local: _localCtrl.text.trim(),
+          paymentMethod: _paymentMethod,
+          observation: _obsCtrl.text.trim().isEmpty
+              ? null
+              : _obsCtrl.text.trim(),
+          odometer: odometer,
+          value: value,
+        );
+      }
 
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Despesa salva com sucesso!')),
+        SnackBar(
+          behavior: SnackBarBehavior.floating,
+          elevation: 0,
+          content: Text(
+            widget.expenseId == null
+                ? 'Despesa criada com sucesso!'
+                : 'Despesa atualizada com sucesso!',
+          ),
+        ),
       );
 
       Navigator.pop(context);
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Erro ao salvar despesa: $e')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          behavior: SnackBarBehavior.floating,
+          elevation: 0,
+          content: Text('Erro ao salvar despesa: $e'),
+        ),
+      );
     } finally {
       if (mounted) {
         setState(() {
@@ -170,6 +240,8 @@ class _DespesaPageState extends State<DespesaPage> {
 
   @override
   Widget build(BuildContext context) {
+    final isEdit = widget.expenseId != null;
+
     return Scaffold(
       appBar: AppBar(
         backgroundColor: Colors.white,
@@ -179,9 +251,9 @@ class _DespesaPageState extends State<DespesaPage> {
           onPressed: () => Navigator.pop(context),
         ),
         centerTitle: true,
-        title: const Text(
-          'NOVA DESPESA',
-          style: TextStyle(
+        title: Text(
+          isEdit ? 'EDITAR DESPESA' : 'NOVA DESPESA',
+          style: const TextStyle(
             color: Colors.black87,
             letterSpacing: 1,
             fontWeight: FontWeight.w600,
@@ -215,7 +287,7 @@ class _DespesaPageState extends State<DespesaPage> {
             ),
             const SizedBox(height: 16),
 
-            // 🔽 SEÇÃO: SELECIONAR VEÍCULO
+            // VEÍCULO
             const Text(
               'VEÍCULO',
               style: TextStyle(
@@ -252,8 +324,7 @@ class _DespesaPageState extends State<DespesaPage> {
                   return const Padding(
                     padding: EdgeInsets.symmetric(vertical: 8),
                     child: Text(
-                      'Você ainda não cadastrou nenhum veículo. '
-                      'Cadastre um veículo para registrar a despesa.',
+                      'Você ainda não cadastrou nenhum veículo.',
                       style: TextStyle(color: Colors.black54, fontSize: 13),
                     ),
                   );
@@ -301,7 +372,7 @@ class _DespesaPageState extends State<DespesaPage> {
             ),
             const SizedBox(height: 16),
 
-            // Linha 1: Data / Hora
+            // Data / Hora
             Row(
               children: [
                 Expanded(
@@ -327,7 +398,7 @@ class _DespesaPageState extends State<DespesaPage> {
             ),
             const SizedBox(height: 12),
 
-            // Linha 2: Tipo de Despesa / Odômetro
+            // Tipo de despesa / Odômetro
             Row(
               children: [
                 Expanded(
@@ -366,7 +437,7 @@ class _DespesaPageState extends State<DespesaPage> {
             ),
             const SizedBox(height: 12),
 
-            // Linha nova: Valor da despesa
+            // Valor
             _GreyField(
               controller: _valueCtrl,
               icon: Icons.attach_money,
@@ -387,7 +458,7 @@ class _DespesaPageState extends State<DespesaPage> {
             ),
             const SizedBox(height: 12),
 
-            // Linha 3: Local (full width)
+            // Local
             _GreyField(
               controller: _localCtrl,
               icon: Icons.location_on_outlined,
@@ -401,19 +472,7 @@ class _DespesaPageState extends State<DespesaPage> {
             ),
             const SizedBox(height: 12),
 
-            // Linha 4: Forma de pagamento (full width)
-            _GreyDropdown(
-              icon: Icons.payment_outlined,
-              label: 'Forma de pagamento',
-              value: _selectedPaymentMethod,
-              items: _paymentMethods,
-              onChanged: (v) {
-                setState(() => _selectedPaymentMethod = v);
-              },
-            ),
-            const SizedBox(height: 12),
-
-            // Linha 5: Observação (multilinha)
+            // Observação
             _GreyField(
               controller: _obsCtrl,
               icon: Icons.notes_outlined,
@@ -423,7 +482,6 @@ class _DespesaPageState extends State<DespesaPage> {
 
             const SizedBox(height: 32),
 
-            // Botão SALVAR
             Center(
               child: SizedBox(
                 width: 220,
@@ -442,9 +500,9 @@ class _DespesaPageState extends State<DespesaPage> {
                           width: 20,
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
-                      : const Text(
-                          'SALVAR',
-                          style: TextStyle(
+                      : Text(
+                          isEdit ? 'ATUALIZAR' : 'SALVAR',
+                          style: const TextStyle(
                             fontWeight: FontWeight.w700,
                             letterSpacing: .6,
                           ),
