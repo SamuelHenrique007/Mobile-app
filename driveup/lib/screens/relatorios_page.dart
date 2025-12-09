@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:driveup/screens/sidemenu_page.dart';
-
-// Se o DonutChart estiver em outro arquivo, importe.
-// import 'donut_chart.dart';
+import 'package:driveup/services/summary_service.dart';
 
 class RelatoriosPage extends StatefulWidget {
   const RelatoriosPage({super.key});
@@ -11,12 +9,11 @@ class RelatoriosPage extends StatefulWidget {
   State<RelatoriosPage> createState() => _RelatoriosPageState();
 }
 
-enum ReportType { geral, abastecimento, despesa, receita }
+enum ReportType { geral, abastecimento, despesa }
 
 class _RelatoriosPageState extends State<RelatoriosPage> {
   ReportType current = ReportType.geral;
 
-  // ====== NOVO: controle de mês para o centro do gráfico ======
   final List<String> _months = const [
     'JANEIRO',
     'FEVEREIRO',
@@ -31,7 +28,8 @@ class _RelatoriosPageState extends State<RelatoriosPage> {
     'NOVEMBRO',
     'DEZEMBRO',
   ];
-  int _monthIndex = 5; // 0=JAN ... 5=JUNHO (exemplo inicial)
+  int _monthIndex = DateTime.now().month - 1;
+  int _year = DateTime.now().year;
 
   void _prevMonth() {
     setState(() {
@@ -45,14 +43,10 @@ class _RelatoriosPageState extends State<RelatoriosPage> {
       _monthIndex = (_monthIndex + 1) % 12;
     });
   }
-  // ============================================================
 
   @override
   Widget build(BuildContext context) {
-    final yellow = const Color(0xFFFFC107);
-    final cs = Theme.of(context).colorScheme;
-
-    final data = _dataFor(current);
+    const yellow = Color(0xFFFFC107);
 
     return Scaffold(
       extendBody: true,
@@ -62,14 +56,14 @@ class _RelatoriosPageState extends State<RelatoriosPage> {
         leading: IconButton(
           icon: const Icon(Icons.menu, color: Colors.black87),
           onPressed: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const SideMenuPage()),
-              );
+            Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const SideMenuPage()),
+            );
           },
         ),
         centerTitle: true,
         title: const Text(
-          'INÍCIO', // mude para "RELATÓRIOS" se preferir
+          'RELATÓRIOS',
           style: TextStyle(color: Colors.black87, letterSpacing: 1),
         ),
         actions: const [
@@ -83,192 +77,259 @@ class _RelatoriosPageState extends State<RelatoriosPage> {
           ),
         ],
       ),
-      body: ListView(
-        padding: const EdgeInsets.symmetric(horizontal: 12),
-        children: [
-          const SizedBox(height: 8),
-          const _SectionTitle('TIPO DE RELATÓRIO'),
-          _ReportChips(
-            value: current,
-            onChanged: (v) => setState(() => current = v),
-          ),
-          _StatsCard(
+      body: StreamBuilder<MonthlySummary>(
+        stream: SummaryService.instance.summaryForMonth(
+          year: _year,
+          month: _monthIndex + 1,
+        ),
+        builder: (context, snapshot) {
+          final isLoading =
+              snapshot.connectionState == ConnectionState.waiting &&
+              !snapshot.hasData;
+
+          final summary = snapshot.data ??
+              MonthlySummary(
+                fuelTotal: 0,
+                expenseTotal: 0,
+              );
+
+          // 🔹 Sempre usar o GERAL para o gráfico
+          final fuel = summary.fuelTotal;
+          final expense = summary.expenseTotal;
+
+          List<DonutSegment> donutSegments;
+          if (fuel <= 0 && expense <= 0) {
+            donutSegments = const [
+              DonutSegment(value: 0.5, color: Color(0xFFFFC107)),
+              DonutSegment(value: 0.5, color: Colors.red),
+            ];
+          } else {
+            final total = (fuel + expense).clamp(0.0001, double.infinity);
+            final fuelFrac = (fuel / total).clamp(0.0, 1.0);
+            final expenseFrac = (expense / total).clamp(0.0, 1.0);
+            donutSegments = [
+              DonutSegment(
+                value: fuelFrac,
+                color: const Color(0xFFFFC107),
+              ),
+              DonutSegment(
+                value: expenseFrac,
+                color: Colors.red.shade600,
+              ),
+            ];
+          }
+
+          // 🔹 Números mudam conforme o filtro (Geral / Abastecimento / Despesa)
+          final data = _buildReportData(summary, current);
+
+          return ListView(
+            padding: const EdgeInsets.symmetric(horizontal: 12),
             children: [
-              _stat('Total', 'R\$', data.totalStr),
-              _stat('Por Dia', 'R\$', data.porDiaStr),
-              _stat('Por KM', 'R\$', data.porKmStr),
-            ],
-          ),
-          const _SectionTitle('DISTÂNCIA'),
-          _StatsCard(
-            children: [
-              _stat('Total', 'KM', data.kmTotalStr),
-              _stat('Média Diária', 'KM', data.kmMediaStr),
-            ],
-          ),
-          const _SectionTitle('RESUMO'),
-          Card(
-            elevation: 1.5,
-            margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
-            ),
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(12, 14, 12, 14),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
+              const SizedBox(height: 8),
+              const _SectionTitle('TIPO DE RELATÓRIO'),
+              _ReportChips(
+                value: current,
+                onChanged: (v) => setState(() => current = v),
+              ),
+              _StatsCard(
                 children: [
-                  Row(
-                    children: [
-                      const Spacer(),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.black.withOpacity(.06),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: const [
-                            Text('Círculo', style: TextStyle(fontSize: 12)),
-                            Icon(Icons.arrow_drop_down, size: 18),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-
-                  // ====== ALTERADO: gráfico com mês e setas no centro ======
-                  SizedBox(
-                    height: 220,
-                    child: Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        DonutChart(
-                          segments: data.segments,
-                          thickness: 26,
-                          gap: 4,
-                        ),
-                        Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            GestureDetector(
-                              onTap: _prevMonth,
-                              child: const Padding(
-                                padding: EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 6,
-                                ),
-                                child: Text(
-                                  '<',
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    color: Colors.black87,
-                                  ),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Text(
-                              _months[_monthIndex],
-                              style: const TextStyle(
-                                fontSize: 16,
-                                letterSpacing: .8,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.black87,
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            GestureDetector(
-                              onTap: _nextMonth,
-                              child: const Padding(
-                                padding: EdgeInsets.symmetric(
-                                  horizontal: 8,
-                                  vertical: 6,
-                                ),
-                                child: Text(
-                                  '>',
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    color: Colors.black87,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  // ==========================================================
-                  const SizedBox(height: 12),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: const [
-                      _QuickAction(
-                        color: Color(0xFFFFD600),
-                        icon: Icons.local_gas_station_outlined,
-                        label: 'Abastecimento',
-                      ),
-                      _QuickAction(
-                        color: Color(0xFFFF5252),
-                        icon: Icons.receipt_long_outlined,
-                        label: 'Despesas',
-                      ),
-                      _QuickAction(
-                        color: Color(0xFF40C4FF),
-                        icon: Icons.build_outlined,
-                        label: 'Serviço',
-                      ),
-                      _QuickAction(
-                        color: Color(0xFF69F0AE),
-                        icon: Icons.attach_money,
-                        label: 'Receita',
-                      ),
-                    ],
-                  ),
+                  _stat('Total', 'R\$', data.totalStr),
+                  _stat('Por Dia', 'R\$', data.porDiaStr),
+                  _stat('Por KM', 'R\$', data.porKmStr),
                 ],
               ),
-            ),
-          ),
-          const SizedBox(height: 92),
-        ],
+              const _SectionTitle('DISTÂNCIA'),
+              _StatsCard(
+                children: [
+                  _stat('Total', 'KM', data.kmTotalStr),
+                  _stat('Média Diária', 'KM', data.kmMediaStr),
+                ],
+              ),
+              const _SectionTitle('RESUMO'),
+              Card(
+                elevation: 1.5,
+                margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(12, 14, 12, 14),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Row(
+                        children: [
+                          const Spacer(),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 6,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.black.withOpacity(.06),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: const [
+                                Text('Círculo', style: TextStyle(fontSize: 12)),
+                                Icon(Icons.arrow_drop_down, size: 18),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      SizedBox(
+                        height: 220,
+                        child: Stack(
+                          alignment: Alignment.center,
+                          children: [
+                            // ⭐ AQUI o gráfico SEMPRE usa o geral (donutSegments)
+                            DonutChart(
+                              segments: donutSegments,
+                              thickness: 26,
+                              gap: 4,
+                            ),
+                            Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                GestureDetector(
+                                  onTap: _prevMonth,
+                                  child: const Padding(
+                                    padding: EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 6,
+                                    ),
+                                    child: Text(
+                                      '<',
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        color: Colors.black87,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Text(
+                                  _months[_monthIndex],
+                                  style: const TextStyle(
+                                    fontSize: 16,
+                                    letterSpacing: .8,
+                                    fontWeight: FontWeight.w600,
+                                    color: Colors.black87,
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                GestureDetector(
+                                  onTap: _nextMonth,
+                                  child: const Padding(
+                                    padding: EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 6,
+                                    ),
+                                    child: Text(
+                                      '>',
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        color: Colors.black87,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceAround,
+                        children: const [
+                          _QuickAction(
+                            color: Color(0xFFFFD600),
+                            icon: Icons.local_gas_station_outlined,
+                            label: 'Abastecimento',
+                          ),
+                          _QuickAction(
+                            color: Color(0xFFFF5252),
+                            icon: Icons.receipt_long_outlined,
+                            label: 'Despesas',
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              if (isLoading)
+                const Padding(
+                  padding: EdgeInsets.only(bottom: 16),
+                  child: Center(child: CircularProgressIndicator()),
+                ),
+              const SizedBox(height: 92),
+            ],
+          );
+        },
       ),
       floatingActionButton: FloatingActionButton(
         shape: const CircleBorder(),
-        clipBehavior: Clip.antiAlias, // borda lisa
+        clipBehavior: Clip.antiAlias,
         backgroundColor: const Color(0xFFFFC107),
         elevation: 3,
-        onPressed: () {},
+        onPressed: () {
+          // TODO: abrir tela para novo registro
+        },
         child: const Icon(Icons.add, color: Colors.black87, size: 28),
       ),
     );
   }
 
-  // ----- helpers de UI -----
-
   Widget _stat(String title, String prefix, String value) {
     return _StatTile(title: title, prefix: prefix, value: value);
   }
 
-  _ReportData _dataFor(ReportType t) {
-    // dados mock para cada aba (ajuste com seus valores reais)
+  _ReportData _buildReportData(MonthlySummary summary, ReportType t) {
+    final daysInMonth =
+        DateUtils.getDaysInMonth(_year, _monthIndex + 1).toDouble();
+
+    final fuel = summary.fuelTotal;
+    final expense = summary.expenseTotal;
+
+    double totalMoney;
+
+    // 🔹 Só os valores mudam conforme o filtro
     switch (t) {
       case ReportType.geral:
-        return _ReportData.general();
+        totalMoney = fuel + expense;
+        break;
       case ReportType.abastecimento:
-        return _ReportData.abastecimento();
+        totalMoney = fuel;
+        break;
       case ReportType.despesa:
-        return _ReportData.despesa();
-      case ReportType.receita:
-        return _ReportData.receita();
+        totalMoney = expense;
+        break;
     }
+
+    final porDia = daysInMonth > 0 ? totalMoney / daysInMonth : 0.0;
+
+    // por enquanto, km são mocks / 0
+    final kmTotal = 0.0;
+    final kmMedia = 0.0;
+
+    return _ReportData(
+      totalStr: _fmtMoney(totalMoney),
+      porDiaStr: _fmtMoney(porDia),
+      porKmStr: _fmtMoney(0),
+      kmTotalStr: _fmtInt(kmTotal),
+      kmMediaStr: _fmtInt(kmMedia),
+    );
   }
+
+  String _fmtMoney(double v) =>
+      v.toStringAsFixed(2).replaceAll('.', ',');
+
+  String _fmtInt(double v) => v.toStringAsFixed(0);
 }
 
 // ---------- COMPONENTES ----------
@@ -306,7 +367,6 @@ class _ReportChips extends StatelessWidget {
       (ReportType.geral, 'Geral'),
       (ReportType.abastecimento, 'Abastecimento'),
       (ReportType.despesa, 'Despesa'),
-      (ReportType.receita, 'Receita'),
     ];
     return SizedBox(
       height: 44,
@@ -322,7 +382,7 @@ class _ReportChips extends StatelessWidget {
             label: Text(
               label,
               style: TextStyle(
-                color: selected ? Colors.black87 : Colors.black87,
+                color: Colors.black87,
                 fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
               ),
             ),
@@ -332,7 +392,8 @@ class _ReportChips extends StatelessWidget {
             side: BorderSide.none,
             onSelected: (_) => onChanged(type),
             showCheckmark: false,
-            visualDensity: const VisualDensity(horizontal: -2, vertical: -2),
+            visualDensity:
+                const VisualDensity(horizontal: -2, vertical: -2),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(10),
             ),
@@ -352,7 +413,9 @@ class _StatsCard extends StatelessWidget {
     return Card(
       elevation: 1.5,
       margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+      ),
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
         child: Row(
@@ -383,7 +446,10 @@ class _StatTile extends StatelessWidget {
       children: [
         Text(
           title,
-          style: TextStyle(fontSize: 12, color: Colors.black.withOpacity(.65)),
+          style: TextStyle(
+            fontSize: 12,
+            color: Colors.black.withOpacity(.65),
+          ),
         ),
         const SizedBox(height: 6),
         RichText(
@@ -445,51 +511,7 @@ class _QuickAction extends StatelessWidget {
   }
 }
 
-class _BottomItem extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final bool selected;
-  final VoidCallback? onTap;
-  const _BottomItem({
-    required this.icon,
-    required this.label,
-    this.selected = false,
-    this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final color = selected ? const Color(0xFFFFC107) : Colors.black54;
-    return Material(
-      type: MaterialType.transparency,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(12),
-        onTap: onTap,
-        mouseCursor: SystemMouseCursors.click,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(icon, color: color),
-              const SizedBox(height: 2),
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 11,
-                  color: color,
-                  fontWeight: selected ? FontWeight.bold : FontWeight.normal,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// ---------- DADOS MOCK POR ABA ----------
+// ---------- DADOS DO GRÁFICO / TIPOS ----------
 
 class _ReportData {
   final String totalStr;
@@ -497,7 +519,6 @@ class _ReportData {
   final String porKmStr;
   final String kmTotalStr;
   final String kmMediaStr;
-  final List<DonutSegment> segments;
 
   _ReportData({
     required this.totalStr,
@@ -505,94 +526,38 @@ class _ReportData {
     required this.porKmStr,
     required this.kmTotalStr,
     required this.kmMediaStr,
-    required this.segments,
   });
-
-  factory _ReportData.general() => _ReportData(
-    totalStr: '350,00',
-    porDiaStr: '45,00',
-    porKmStr: '12,09',
-    kmTotalStr: '150',
-    kmMediaStr: '23',
-    segments: [
-      DonutSegment(value: .18, color: Colors.blue.shade600),
-      DonutSegment(value: .38, color: const Color(0xFFFFC107)),
-      DonutSegment(value: .16, color: Colors.green.shade500),
-      DonutSegment(value: .28, color: Colors.red.shade600),
-    ],
-  );
-
-  factory _ReportData.abastecimento() => _ReportData(
-    totalStr: '220,00',
-    porDiaStr: '28,00',
-    porKmStr: '7,10',
-    kmTotalStr: '110',
-    kmMediaStr: '18',
-    segments: [
-      DonutSegment(value: .30, color: Colors.blue.shade600),
-      DonutSegment(value: .40, color: const Color(0xFFFFC107)),
-      DonutSegment(value: .10, color: Colors.green.shade500),
-      DonutSegment(value: .20, color: Colors.red.shade600),
-    ],
-  );
-
-  factory _ReportData.despesa() => _ReportData(
-    totalStr: '510,00',
-    porDiaStr: '65,00',
-    porKmStr: '16,40',
-    kmTotalStr: '180',
-    kmMediaStr: '27',
-    segments: [
-      DonutSegment(value: .14, color: Colors.blue.shade600),
-      DonutSegment(value: .26, color: const Color(0xFFFFC107)),
-      DonutSegment(value: .12, color: Colors.green.shade500),
-      DonutSegment(value: .48, color: Colors.red.shade600),
-    ],
-  );
-
-  factory _ReportData.receita() => _ReportData(
-    totalStr: '870,00',
-    porDiaStr: '115,00',
-    porKmStr: '22,00',
-    kmTotalStr: '240',
-    kmMediaStr: '34',
-    segments: [
-      DonutSegment(value: .10, color: Colors.blue.shade600),
-      DonutSegment(value: .22, color: const Color(0xFFFFC107)),
-      DonutSegment(value: .28, color: Colors.green.shade500),
-      DonutSegment(value: .40, color: Colors.red.shade600),
-    ],
-  );
 }
 
-/// Simple model for a donut segment.
 class DonutSegment {
-  final double value; // fraction of the whole (sum should typically be ~1.0)
+  final double value;
   final Color color;
 
   const DonutSegment({required this.value, required this.color});
 }
 
-/// A lightweight DonutChart implementation using CustomPainter.
-/// It supports thickness and a small gap between segments.
 class DonutChart extends StatelessWidget {
   final List<DonutSegment> segments;
   final double thickness;
-  final double gap; // degrees of gap between segments
+  final double gap;
 
-  const DonutChart({required this.segments, this.thickness = 16, this.gap = 2});
+  const DonutChart({
+    super.key,
+    required this.segments,
+    this.thickness = 16,
+    this.gap = 2,
+  });
 
   @override
   Widget build(BuildContext context) {
-    // Parent provides a fixed height (220); make the chart square using that height.
     return LayoutBuilder(
       builder: (context, constraints) {
         final double size =
             constraints.maxHeight.isFinite && constraints.maxHeight > 0
-            ? constraints.maxHeight
-            : (constraints.maxWidth.isFinite && constraints.maxWidth > 0
-                  ? constraints.maxWidth
-                  : 200);
+                ? constraints.maxHeight
+                : (constraints.maxWidth.isFinite && constraints.maxWidth > 0
+                    ? constraints.maxWidth
+                    : 200);
         return Center(
           child: SizedBox(
             width: size,
@@ -614,7 +579,7 @@ class DonutChart extends StatelessWidget {
 class _DonutPainter extends CustomPainter {
   final List<DonutSegment> segments;
   final double thickness;
-  final double gap; // degrees
+  final double gap;
 
   _DonutPainter({
     required this.segments,
@@ -629,14 +594,13 @@ class _DonutPainter extends CustomPainter {
     final Offset center = Offset(cx, cy);
     final double radius = (size.shortestSide - thickness) / 2;
     final Rect rect = Rect.fromCircle(center: center, radius: radius);
-    final double tau = 2 * 3.141592653589793;
+    const double tau = 2 * 3.141592653589793;
     final double gapRad = gap * 3.141592653589793 / 180.0;
 
-    double startAngle = -3.141592653589793 / 2; // start at top
+    double startAngle = -3.141592653589793 / 2;
 
     for (final seg in segments) {
       double sweep = seg.value * tau;
-      // subtract a small gap so segments don't touch
       final double effectiveSweep = (sweep - gapRad).clamp(0.0, tau);
       final paint = Paint()
         ..color = seg.color
@@ -649,7 +613,6 @@ class _DonutPainter extends CustomPainter {
       startAngle += sweep;
     }
 
-    // “furo” interno para centro limpo
     final paintFill = Paint()..color = Colors.white;
     canvas.drawCircle(center, radius - thickness / 2, paintFill);
   }

@@ -151,7 +151,7 @@ class _ProfilePageState extends State<PerfilPage> {
                 Expanded(
                   child: _GreyField(
                     controller: _cardNumberCtrl,
-                    hint: 'Numero',
+                    hint: 'Numero da CNH',
                     icon: Icons.credit_card,
                     keyboardType: TextInputType.number,
                   ),

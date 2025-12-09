@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 import 'dart:math' as math;
 
 import 'package:driveup/services/vehicle_service.dart';
+import 'package:driveup/services/summary_service.dart';
 import 'package:driveup/screens/sidemenu_page.dart';
-import 'package:driveup/screens/vehicle_history_page.dart'; // 👈 nova importação
+import 'package:driveup/screens/vehicle_history_page.dart';
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
@@ -17,9 +18,9 @@ class HomePage extends StatelessWidget {
         leading: IconButton(
           icon: const Icon(Icons.menu, color: Colors.black87),
           onPressed: () {
-            Navigator.of(
-              context,
-            ).push(MaterialPageRoute(builder: (_) => const SideMenuPage()));
+            Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const SideMenuPage()),
+            );
           },
         ),
         centerTitle: true,
@@ -43,7 +44,7 @@ class HomePage extends StatelessWidget {
         ],
       ),
 
-      // 👇 só o conteúdo, sem FAB nem bottom bar
+      // 👇 só o conteúdo, sem FAB/bottom bar (quem cuida é o MainNavigation)
       body: StreamBuilder<List<Vehicle>>(
         stream: VehicleService.instance.vehiclesStream(),
         builder: (context, snapshot) {
@@ -111,8 +112,9 @@ class HomePage extends StatelessWidget {
             }
           }
 
-          // dá um espaço extra para a área da bottom bar + FAB
+          // espaço extra por causa da bottom bar global + FAB
           children.add(const SizedBox(height: 120));
+
           return ListView(
             padding: const EdgeInsets.symmetric(horizontal: 12),
             children: children,
@@ -168,7 +170,9 @@ class _SummaryCardState extends State<SummaryCard> {
     'NOVEMBRO',
     'DEZEMBRO',
   ];
-  int _monthIndex = 5;
+
+  int _monthIndex = DateTime.now().month - 1; // mês atual (0–11)
+  int get _year => DateTime.now().year;
 
   void _prevMonth() {
     setState(() {
@@ -185,103 +189,150 @@ class _SummaryCardState extends State<SummaryCard> {
 
   @override
   Widget build(BuildContext context) {
-    final segments = [
-      DonutSegment(value: 0.16, color: Colors.blue.shade600),
-      DonutSegment(value: 0.28, color: const Color(0xFFFFC107)),
-      DonutSegment(value: 0.14, color: Colors.green.shade500),
-      DonutSegment(value: 0.42, color: Colors.red.shade600),
-    ];
+    final month = _monthIndex + 1; // 1–12
 
     return Card(
       child: Padding(
         padding: const EdgeInsets.fromLTRB(12, 18, 12, 8),
-        child: Column(
-          children: [
-            SizedBox(
-              height: 240,
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  DonutChart(segments: segments, thickness: 28, gap: 4),
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
+        child: StreamBuilder<MonthlySummary>(
+          // 🔴 Se no seu service o método se chama monthSummary, troque aqui:
+          // stream: SummaryService.instance.monthSummary(year: _year, month: month),
+          stream: SummaryService.instance.summaryForMonth(
+            year: _year,
+            month: month,
+          ),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting &&
+                !snapshot.hasData) {
+              return const SizedBox(
+                height: 240,
+                child: Center(child: CircularProgressIndicator()),
+              );
+            }
+
+            final summary = snapshot.data ??
+                MonthlySummary(
+                  fuelTotal: 0,
+                  expenseTotal: 0,
+                );
+
+            final fuel = summary.fuelTotal;
+            final expense = summary.expenseTotal;
+
+            List<DonutSegment> segments;
+
+            if (fuel <= 0 && expense <= 0) {
+              // nada no mês → donut "neutro"
+              segments = [
+                DonutSegment(
+                  value: 0.5,
+                  color: const Color(0xFFFFC107), // abastecimento
+                ),
+                DonutSegment(
+                  value: 0.5,
+                  color: Colors.red.shade600,
+                ),
+              ];
+            } else {
+              final total = (fuel + expense).clamp(0.0001, double.infinity);
+              final fuelFrac = (fuel / total).clamp(0.0, 1.0);
+              final expenseFrac = (expense / total).clamp(0.0, 1.0);
+
+              segments = [
+                DonutSegment(
+                  value: fuelFrac,
+                  color: const Color(0xFFFFC107), // abastecimento
+                ),
+                DonutSegment(
+                  value: expenseFrac,
+                  color: Colors.red.shade600, // despesas
+                ),
+              ];
+            }
+
+            return Column(
+              children: [
+                SizedBox(
+                  height: 240,
+                  child: Stack(
+                    alignment: Alignment.center,
                     children: [
-                      GestureDetector(
-                        onTap: _prevMonth,
-                        child: const Padding(
-                          padding: EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 6,
+                      DonutChart(
+                        segments: segments,
+                        thickness: 28,
+                        gap: 4,
+                      ),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          GestureDetector(
+                            onTap: _prevMonth,
+                            child: const Padding(
+                              padding: EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 6,
+                              ),
+                              child: Text(
+                                '<',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  color: Colors.black87,
+                                ),
+                              ),
+                            ),
                           ),
-                          child: Text(
-                            '<',
-                            style: TextStyle(
+                          const SizedBox(width: 12),
+                          Text(
+                            _months[_monthIndex],
+                            style: const TextStyle(
                               fontSize: 16,
+                              letterSpacing: .8,
+                              fontWeight: FontWeight.w600,
                               color: Colors.black87,
                             ),
                           ),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Text(
-                        _months[_monthIndex],
-                        style: const TextStyle(
-                          fontSize: 16,
-                          letterSpacing: .8,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.black87,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      GestureDetector(
-                        onTap: _nextMonth,
-                        child: const Padding(
-                          padding: EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 6,
-                          ),
-                          child: Text(
-                            '>',
-                            style: TextStyle(
-                              fontSize: 16,
-                              color: Colors.black87,
+                          const SizedBox(width: 12),
+                          GestureDetector(
+                            onTap: _nextMonth,
+                            child: const Padding(
+                              padding: EdgeInsets.symmetric(
+                                horizontal: 8,
+                                vertical: 6,
+                              ),
+                              child: Text(
+                                '>',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  color: Colors.black87,
+                                ),
+                              ),
                             ),
                           ),
-                        ),
+                        ],
                       ),
                     ],
                   ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 8),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: const [
-                SummaryAction(
-                  color: Color(0xFFFFD600),
-                  icon: Icons.local_gas_station_outlined,
-                  label: 'Abastecimento',
                 ),
-                SummaryAction(
-                  color: Color(0xFFFF5252),
-                  icon: Icons.receipt_long_outlined,
-                  label: 'Despesas',
+                const SizedBox(height: 8),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: const [
+                    SummaryAction(
+                      color: Color(0xFFFFD600),
+                      icon: Icons.local_gas_station_outlined,
+                      label: 'Abastecimento',
+                    ),
+                    SummaryAction(
+                      color: Color(0xFFFF5252),
+                      icon: Icons.receipt_long_outlined,
+                      label: 'Despesas',
+                    ),
+                  ],
                 ),
-                SummaryAction(
-                  color: Color(0xFF40C4FF),
-                  icon: Icons.build_outlined,
-                  label: 'Serviço',
-                ),
-                SummaryAction(
-                  color: Color(0xFF69F0AE),
-                  icon: Icons.attach_money,
-                  label: 'Receita',
-                ),
+                const SizedBox(height: 8),
               ],
-            ),
-            const SizedBox(height: 8),
-          ],
+            );
+          },
         ),
       ),
     );
@@ -330,7 +381,7 @@ class VehicleCard extends StatelessWidget {
   final String year;
   final String color;
   final String brand;
-  final VoidCallback? onTap; // 👈 novo
+  final VoidCallback? onTap;
 
   const VehicleCard({
     super.key,
@@ -403,95 +454,6 @@ class _MiniInfo extends StatelessWidget {
     return Text(
       '$label: $value',
       style: TextStyle(fontSize: 12.5, color: color),
-    );
-  }
-}
-
-/// ====== BOTTOM BAR ======
-class _BottomBar extends StatelessWidget {
-  const _BottomBar();
-
-  @override
-  Widget build(BuildContext context) {
-    return SafeArea(
-      top: false,
-      child: SizedBox(
-        height: 76,
-        child: BottomAppBar(
-          shape: const CircularNotchedRectangle(),
-          notchMargin: 8,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _BottomItem(
-                icon: Icons.home_outlined,
-                label: 'Início',
-                selected: true,
-                onTap: () {},
-              ),
-              _BottomItem(
-                icon: Icons.receipt_long_outlined,
-                label: 'Registros',
-                onTap: () {},
-              ),
-              const SizedBox(width: 56),
-              _BottomItem(
-                icon: Icons.notifications_none,
-                label: 'Alertas',
-                onTap: () {},
-              ),
-              _BottomItem(
-                icon: Icons.directions_car_filled_outlined,
-                label: 'Veículos',
-                onTap: () {
-                  Navigator.pushNamed(context, '/veiculos');
-                },
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _BottomItem extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final bool selected;
-  final VoidCallback? onTap;
-
-  const _BottomItem({
-    required this.icon,
-    required this.label,
-    this.selected = false,
-    this.onTap,
-    super.key,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final color = selected ? const Color(0xFFFFC107) : Colors.black54;
-
-    return Material(
-      type: MaterialType.transparency,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(12),
-        onTap: onTap,
-        mouseCursor: SystemMouseCursors.click,
-        splashFactory: InkRipple.splashFactory,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(icon, color: color),
-              const SizedBox(height: 2),
-              Text(label, style: TextStyle(fontSize: 11, color: color)),
-            ],
-          ),
-        ),
-      ),
     );
   }
 }

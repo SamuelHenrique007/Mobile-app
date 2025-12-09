@@ -88,21 +88,10 @@ class SideMenuPage extends StatelessWidget {
             onTap: () {},
           ),
           _MenuTile(
-            icon: Icons.build_outlined,
-            label: 'Tipo de serviço',
-            onTap: () {},
-          ),
-          _MenuTile(
             icon: Icons.description_outlined,
             label: 'Tipo de Despesa',
             onTap: () {},
           ),
-          _MenuTile(
-            icon: Icons.description_outlined,
-            label: 'Tipo de receita',
-            onTap: () {},
-          ),
-
           const Divider(height: 28),
 
           // Itens desabilitados (acinzentados)
