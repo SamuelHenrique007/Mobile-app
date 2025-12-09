@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:driveup/screens/sidemenu_page.dart';
+import 'package:driveup/services/vehicle_service.dart';
+import 'package:driveup/services/fuel_service.dart';
 
 class AbastecimentoPage extends StatefulWidget {
   const AbastecimentoPage({super.key});
@@ -12,18 +14,20 @@ class _AbastecimentoPageState extends State<AbastecimentoPage> {
   final _dateCtrl = TextEditingController();
   final _timeCtrl = TextEditingController();
   final _odometerCtrl = TextEditingController();
-  final _fuelPriceCtrl = TextEditingController();   // valor do litro
-  final _totalPriceCtrl = TextEditingController();  // valor total em R$
-  final _litersCtrl = TextEditingController();      // litros
+  final _fuelPriceCtrl = TextEditingController(); // valor do litro
+  final _totalPriceCtrl = TextEditingController(); // valor total em R$
+  final _litersCtrl = TextEditingController(); // litros
   final _stationCtrl = TextEditingController();
 
   String _fuelType = 'Gasolina';
   final _fuelTypes = ['Gasolina', 'Etanol', 'Diesel', 'GNV'];
 
+  String? _selectedVehicleId;
+  bool _isSaving = false;
+
   @override
   void initState() {
     super.initState();
-    // sempre que mudar valor do litro ou valor total, recalcula litros
     _fuelPriceCtrl.addListener(_recalculateLiters);
     _totalPriceCtrl.addListener(_recalculateLiters);
   }
@@ -46,23 +50,17 @@ class _AbastecimentoPageState extends State<AbastecimentoPage> {
   double? _parseBrNumber(String text) {
     if (text.trim().isEmpty) return null;
     var cleaned = text.trim();
-
-    // remove separador de milhar simples: 1.234,56 -> 1234,56
     cleaned = cleaned.replaceAll('.', '');
-    // troca vírgula por ponto: 1234,56 -> 1234.56
     cleaned = cleaned.replaceAll(',', '.');
-
     return double.tryParse(cleaned);
   }
 
-  /// Recalcula automaticamente o campo "Litros" quando
-  /// "Valor combustível" e "Valor total" forem preenchidos
+  /// Recalcula litros = total / preço
   void _recalculateLiters() {
-    final price = _parseBrNumber(_fuelPriceCtrl.text);  // valor por litro
-    final total = _parseBrNumber(_totalPriceCtrl.text); // quanto pagou
+    final price = _parseBrNumber(_fuelPriceCtrl.text);
+    final total = _parseBrNumber(_totalPriceCtrl.text);
 
     if (price == null || price <= 0 || total == null) {
-      // se faltar dado ou der zero, limpa litros
       if (_litersCtrl.text.isNotEmpty) {
         _litersCtrl.text = '';
       }
@@ -70,12 +68,101 @@ class _AbastecimentoPageState extends State<AbastecimentoPage> {
     }
 
     final liters = total / price;
-
-    // formata com 2 casas e vírgula: 12.34 -> "12,34"
     final formatted = liters.toStringAsFixed(2).replaceAll('.', ',');
 
     if (_litersCtrl.text != formatted) {
       _litersCtrl.text = formatted;
+    }
+  }
+
+  DateTime _buildDateTimeFromFields() {
+    final now = DateTime.now();
+
+    int day = now.day;
+    int month = now.month;
+    int year = now.year;
+
+    if (_dateCtrl.text.isNotEmpty) {
+      final parts = _dateCtrl.text.split('/');
+      if (parts.length == 3) {
+        day = int.tryParse(parts[0]) ?? day;
+        month = int.tryParse(parts[1]) ?? month;
+        year = int.tryParse(parts[2]) ?? year;
+      }
+    }
+
+    int hour = now.hour;
+    int minute = now.minute;
+
+    if (_timeCtrl.text.isNotEmpty) {
+      final parts = _timeCtrl.text.split(':');
+      if (parts.length == 2) {
+        hour = int.tryParse(parts[0]) ?? hour;
+        minute = int.tryParse(parts[1]) ?? minute;
+      }
+    }
+
+    return DateTime(year, month, day, hour, minute);
+  }
+
+  Future<void> _onSave() async {
+    if (_isSaving) return;
+
+    if (_selectedVehicleId == null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Selecione o veículo.')));
+      return;
+    }
+
+    final totalPrice = _parseBrNumber(_totalPriceCtrl.text);
+    final liters = _parseBrNumber(_litersCtrl.text);
+
+    if (totalPrice == null || liters == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Informe valor total e litros (ou valor do litro).'),
+        ),
+      );
+      return;
+    }
+
+    setState(() => _isSaving = true);
+
+    try {
+      final dateTime = _buildDateTimeFromFields();
+      final pricePerLiter = _parseBrNumber(_fuelPriceCtrl.text);
+      final odometer = _parseBrNumber(_odometerCtrl.text);
+      final station = _stationCtrl.text.trim().isEmpty
+          ? null
+          : _stationCtrl.text.trim();
+
+      await FuelService.instance.createFuel(
+        vehicleId: _selectedVehicleId!,
+        dateTime: dateTime,
+        fuelType: _fuelType,
+        odometer: odometer,
+        pricePerLiter: pricePerLiter,
+        totalPrice: totalPrice,
+        liters: liters,
+        station: station,
+      );
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Abastecimento salvo com sucesso!')),
+      );
+      Navigator.pop(context);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Erro ao salvar abastecimento: $e')),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _isSaving = false);
+      }
     }
   }
 
@@ -123,6 +210,85 @@ class _AbastecimentoPageState extends State<AbastecimentoPage> {
               fontWeight: FontWeight.w600,
               color: Colors.black87,
             ),
+          ),
+          const SizedBox(height: 16),
+
+          // ===== VEÍCULO =====
+          const Text(
+            'VEÍCULO',
+            style: TextStyle(
+              fontSize: 13,
+              letterSpacing: .5,
+              fontWeight: FontWeight.w500,
+              color: Colors.black87,
+            ),
+          ),
+          const SizedBox(height: 8),
+          StreamBuilder<List<Vehicle>>(
+            stream: VehicleService.instance.vehiclesStream(),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 8),
+                  child: LinearProgressIndicator(minHeight: 2),
+                );
+              }
+
+              if (snapshot.hasError) {
+                return Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  child: Text(
+                    'Erro ao carregar veículos: ${snapshot.error}',
+                    style: const TextStyle(color: Colors.redAccent),
+                  ),
+                );
+              }
+
+              final vehicles = snapshot.data ?? [];
+
+              if (vehicles.isEmpty) {
+                return const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 8),
+                  child: Text(
+                    'Você ainda não cadastrou nenhum veículo.',
+                    style: TextStyle(color: Colors.black54, fontSize: 13),
+                  ),
+                );
+              }
+
+              return Container(
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade200,
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                padding: const EdgeInsets.symmetric(horizontal: 10),
+                child: DropdownButtonFormField<String>(
+                  value: _selectedVehicleId,
+                  decoration: const InputDecoration(
+                    icon: Icon(
+                      Icons.directions_car_filled_outlined,
+                      size: 20,
+                      color: Colors.black54,
+                    ),
+                    border: InputBorder.none,
+                    hintText: 'Selecione o veículo',
+                  ),
+                  items: vehicles
+                      .map(
+                        (v) => DropdownMenuItem<String>(
+                          value: v.id,
+                          child: Text(v.name),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: (value) {
+                    setState(() {
+                      _selectedVehicleId = value;
+                    });
+                  },
+                ),
+              );
+            },
           ),
           const SizedBox(height: 16),
 
@@ -186,8 +352,9 @@ class _AbastecimentoPageState extends State<AbastecimentoPage> {
                   controller: _fuelPriceCtrl,
                   icon: Icons.local_gas_station,
                   hint: 'Valor combustível',
-                  keyboardType:
-                      const TextInputType.numberWithOptions(decimal: true),
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
                 ),
               ),
               const SizedBox(width: 12),
@@ -196,8 +363,9 @@ class _AbastecimentoPageState extends State<AbastecimentoPage> {
                   controller: _totalPriceCtrl,
                   icon: Icons.attach_money,
                   hint: 'Valor total',
-                  keyboardType:
-                      const TextInputType.numberWithOptions(decimal: true),
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
                 ),
               ),
               const SizedBox(width: 12),
@@ -206,8 +374,9 @@ class _AbastecimentoPageState extends State<AbastecimentoPage> {
                   controller: _litersCtrl,
                   icon: Icons.local_drink_outlined,
                   hint: 'Litros',
-                  keyboardType:
-                      const TextInputType.numberWithOptions(decimal: true),
+                  keyboardType: const TextInputType.numberWithOptions(
+                    decimal: true,
+                  ),
                 ),
               ),
             ],
@@ -235,14 +404,20 @@ class _AbastecimentoPageState extends State<AbastecimentoPage> {
                   shape: const StadiumBorder(),
                   elevation: 1.5,
                 ),
-                onPressed: _onSave,
-                child: const Text(
-                  'SALVAR',
-                  style: TextStyle(
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: .6,
-                  ),
-                ),
+                onPressed: _isSaving ? null : _onSave,
+                child: _isSaving
+                    ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Text(
+                        'SALVAR',
+                        style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: .6,
+                        ),
+                      ),
               ),
             ),
           ),
@@ -270,23 +445,13 @@ class _AbastecimentoPageState extends State<AbastecimentoPage> {
 
   Future<void> _pickTime() async {
     final now = TimeOfDay.now();
-    final picked = await showTimePicker(
-      context: context,
-      initialTime: now,
-    );
+    final picked = await showTimePicker(context: context, initialTime: now);
     if (picked != null) {
       setState(() {
         _timeCtrl.text =
             '${picked.hour.toString().padLeft(2, '0')}:${picked.minute.toString().padLeft(2, '0')}';
       });
     }
-  }
-
-  void _onSave() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Abastecimento salvo!')),
-    );
-    Navigator.pop(context); 
   }
 }
 
@@ -323,8 +488,10 @@ class _GreyField extends StatelessWidget {
           borderRadius: BorderRadius.circular(14),
           borderSide: BorderSide.none,
         ),
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: 14,
+          vertical: 14,
+        ),
       ),
     );
   }
@@ -358,10 +525,7 @@ class _GreyDropdown extends StatelessWidget {
           border: InputBorder.none,
         ),
         items: items
-            .map((e) => DropdownMenuItem<String>(
-                  value: e,
-                  child: Text(e),
-                ))
+            .map((e) => DropdownMenuItem<String>(value: e, child: Text(e)))
             .toList(),
         onChanged: onChanged,
       ),

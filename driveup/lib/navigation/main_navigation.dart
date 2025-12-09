@@ -6,6 +6,7 @@ import 'package:driveup/screens/veiculos_page.dart';
 import 'package:driveup/screens/relatorios_page.dart';
 import 'package:driveup/screens/notificacoes_page.dart';
 import 'package:driveup/screens/abastecimento_page.dart';
+import 'package:driveup/screens/despesa_page.dart';
 
 class MainNavigation extends StatefulWidget {
   const MainNavigation({super.key});
@@ -189,7 +190,9 @@ class _AddOptionsModal extends StatelessWidget {
                       onTap: () {
                         Navigator.pop(context);
                         Navigator.of(context).push(
-                          MaterialPageRoute(builder: (_) => const AbastecimentoPage()),
+                          MaterialPageRoute(
+                            builder: (_) => const AbastecimentoPage(),
+                          ),
                         );
                         // TODO: navegar para tela de Abastecimento
                       },
@@ -200,6 +203,11 @@ class _AddOptionsModal extends StatelessWidget {
                       label: 'Despesa',
                       onTap: () {
                         Navigator.pop(context);
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => const DespesaPage(),
+                          ),
+                        );
                       },
                     ),
                     const Divider(height: 1),

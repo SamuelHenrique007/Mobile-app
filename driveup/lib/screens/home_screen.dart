@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'dart:math' as math;
 
 import 'package:driveup/services/vehicle_service.dart';
-import 'package:driveup/screens/sidemenu_page.dart'; // 👈 backend de veículos
+import 'package:driveup/screens/sidemenu_page.dart';
+import 'package:driveup/screens/vehicle_history_page.dart'; // 👈 nova importação
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
@@ -16,9 +17,9 @@ class HomePage extends StatelessWidget {
         leading: IconButton(
           icon: const Icon(Icons.menu, color: Colors.black87),
           onPressed: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const SideMenuPage()),
-              );
+            Navigator.of(
+              context,
+            ).push(MaterialPageRoute(builder: (_) => const SideMenuPage()));
           },
         ),
         centerTitle: true,
@@ -96,6 +97,14 @@ class HomePage extends StatelessWidget {
                     year: v.year,
                     color: v.color,
                     brand: v.brand,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => VehicleHistoryPage(vehicle: v),
+                        ),
+                      );
+                    },
                   ),
                 );
               }
@@ -321,6 +330,7 @@ class VehicleCard extends StatelessWidget {
   final String year;
   final String color;
   final String brand;
+  final VoidCallback? onTap; // 👈 novo
 
   const VehicleCard({
     super.key,
@@ -330,6 +340,7 @@ class VehicleCard extends StatelessWidget {
     required this.year,
     required this.color,
     required this.brand,
+    this.onTap,
   });
 
   @override
@@ -337,39 +348,43 @@ class VehicleCard extends StatelessWidget {
     final subtle = Colors.black.withOpacity(.65);
 
     return Card(
-      child: Padding(
-        padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Icon(icon, size: 36, color: Colors.black87),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(icon, size: 36, color: Colors.black87),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 6),
-                  Wrap(
-                    spacing: 24,
-                    runSpacing: 4,
-                    children: [
-                      _MiniInfo('Modelo', model, subtle),
-                      _MiniInfo('Ano', year, subtle),
-                      _MiniInfo('Cor', color, subtle),
-                      _MiniInfo('Marca', brand, subtle),
-                    ],
-                  ),
-                ],
+                    const SizedBox(height: 6),
+                    Wrap(
+                      spacing: 24,
+                      runSpacing: 4,
+                      children: [
+                        _MiniInfo('Modelo', model, subtle),
+                        _MiniInfo('Ano', year, subtle),
+                        _MiniInfo('Cor', color, subtle),
+                        _MiniInfo('Marca', brand, subtle),
+                      ],
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
