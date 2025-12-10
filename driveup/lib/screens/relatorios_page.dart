@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:driveup/screens/sidemenu_page.dart';
 import 'package:driveup/services/summary_service.dart';
-import 'package:driveup/widgets/profile_avatar_button.dart';
 import 'package:driveup/screens/perfil_page.dart';
 
 class RelatoriosPage extends StatefulWidget {
@@ -37,12 +36,14 @@ class _RelatoriosPageState extends State<RelatoriosPage> {
     setState(() {
       _monthIndex = (_monthIndex - 1) % 12;
       if (_monthIndex < 0) _monthIndex += 12;
+      // se quiser, pode ajustar ano aqui depois
     });
   }
 
   void _nextMonth() {
     setState(() {
       _monthIndex = (_monthIndex + 1) % 12;
+      // se quiser, pode ajustar ano aqui depois
     });
   }
 
@@ -98,8 +99,7 @@ class _RelatoriosPageState extends State<RelatoriosPage> {
               snapshot.connectionState == ConnectionState.waiting &&
               !snapshot.hasData;
 
-          final summary =
-              snapshot.data ?? MonthlySummary(fuelTotal: 0, expenseTotal: 0);
+          final summary = snapshot.data ?? MonthlySummary.empty();
 
           // 🔹 Sempre usar o GERAL para o gráfico
           final fuel = summary.fuelTotal;
@@ -117,7 +117,7 @@ class _RelatoriosPageState extends State<RelatoriosPage> {
             final expenseFrac = (expense / total).clamp(0.0, 1.0);
             donutSegments = [
               DonutSegment(value: fuelFrac, color: const Color(0xFFFFC107)),
-              DonutSegment(value: expenseFrac, color: Colors.red.shade600),
+              DonutSegment(value: expenseFrac, color: Colors.red),
             ];
           }
 
@@ -317,14 +317,17 @@ class _RelatoriosPageState extends State<RelatoriosPage> {
 
     final porDia = daysInMonth > 0 ? totalMoney / daysInMonth : 0.0;
 
-    // por enquanto, km são mocks / 0
-    final kmTotal = 0.0;
-    final kmMedia = 0.0;
+    // km vindos do SummaryService
+    final kmTotal = summary.kmTotal;
+    final kmMedia = summary.kmDailyAvg;
+
+    // R$/KM depende do filtro atual
+    final custoPorKm = kmTotal > 0 ? totalMoney / kmTotal : 0.0;
 
     return _ReportData(
       totalStr: _fmtMoney(totalMoney),
       porDiaStr: _fmtMoney(porDia),
-      porKmStr: _fmtMoney(0),
+      porKmStr: _fmtMoney(custoPorKm),
       kmTotalStr: _fmtInt(kmTotal),
       kmMediaStr: _fmtInt(kmMedia),
     );
@@ -551,10 +554,10 @@ class DonutChart extends StatelessWidget {
       builder: (context, constraints) {
         final double size =
             constraints.maxHeight.isFinite && constraints.maxHeight > 0
-            ? constraints.maxHeight
-            : (constraints.maxWidth.isFinite && constraints.maxWidth > 0
-                  ? constraints.maxWidth
-                  : 200);
+                ? constraints.maxHeight
+                : (constraints.maxWidth.isFinite && constraints.maxWidth > 0
+                    ? constraints.maxWidth
+                    : 200);
         return Center(
           child: SizedBox(
             width: size,
