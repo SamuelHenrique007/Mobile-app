@@ -216,8 +216,8 @@ class _SummaryCardState extends State<SummaryCard> {
               );
             }
 
-            final summary =
-                snapshot.data ?? MonthlySummary(fuelTotal: 0, expenseTotal: 0);
+            final summary = snapshot.data ?? MonthlySummary.empty();
+
 
             final fuel = summary.fuelTotal;
             final expense = summary.expenseTotal;
