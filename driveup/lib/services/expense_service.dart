@@ -29,6 +29,7 @@ class ExpenseService {
 
   Future<void> createExpense({
     required String vehicleId,
+    required String vehicleName,
     required DateTime dateTime,
     required String expenseType,
     required String local,
@@ -48,6 +49,7 @@ class ExpenseService {
     final data = <String, dynamic>{
       'userId': user.uid,
       'vehicleId': vehicleId,
+      'vehicleName': vehicleName,  
       'dateTime': Timestamp.fromDate(dateTime),
       'expenseType': expenseType,
       'local': local,
@@ -65,6 +67,7 @@ class ExpenseService {
   Future<void> updateExpense({
     required String id,
     required String vehicleId,
+    String? vehicleName, 
     required DateTime dateTime,
     required String expenseType,
     required String local,
@@ -82,6 +85,7 @@ class ExpenseService {
     final data = <String, dynamic>{
       'userId': user.uid,
       'vehicleId': vehicleId,
+      'vehicleName': vehicleName, 
       'dateTime': Timestamp.fromDate(dateTime),
       'expenseType': expenseType,
       'local': local,
@@ -128,4 +132,34 @@ class ExpenseService {
           return docs;
         });
   }
+  /// Stream de todas as despesas do usuário, ordenadas (mais recentes primeiro)
+Stream<List<Map<String, dynamic>>> expensesByUserStream() {
+  final user = _auth.currentUser;
+  if (user == null) {
+    return const Stream<List<Map<String, dynamic>>>.empty();
+  }
+
+  return _firestore
+      .collection('expenses')
+      .where('userId', isEqualTo: user.uid)
+      .snapshots()
+      .map((snap) {
+        final list = snap.docs.map((d) {
+          final data = d.data();
+          data['id'] = d.id; // adiciona o ID junto
+          return data;
+        }).toList();
+
+        list.sort((a, b) {
+          final ta = a['dateTime'] as Timestamp?;
+          final tb = b['dateTime'] as Timestamp?;
+          final ma = ta?.millisecondsSinceEpoch ?? 0;
+          final mb = tb?.millisecondsSinceEpoch ?? 0;
+          return mb.compareTo(ma); // mais recente primeiro
+        });
+
+        return list;
+      });
+}
+
 }

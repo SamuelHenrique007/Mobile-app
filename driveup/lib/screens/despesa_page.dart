@@ -41,6 +41,7 @@ class _DespesaPageState extends State<DespesaPage> {
 
   String? _selectedExpenseType;
   String? _selectedVehicleId;
+  String? _selectedVehicleName; // <- nome do veículo selecionado
 
   /// Agora o método de pagamento é apenas interno (sem campo na tela)
   String _paymentMethod = 'Não informado';
@@ -56,6 +57,7 @@ class _DespesaPageState extends State<DespesaPage> {
     if (data == null) return;
 
     _selectedVehicleId = data['vehicleId'] as String?;
+    _selectedVehicleName = data['vehicleName'] as String?; // <- recupera nome
     _selectedExpenseType = data['expenseType'] as String?;
 
     final odometer = data['odometer'];
@@ -147,7 +149,7 @@ class _DespesaPageState extends State<DespesaPage> {
     final isValid = _formKey.currentState?.validate() ?? false;
     if (!isValid) return;
 
-    if (_selectedVehicleId == null) {
+    if (_selectedVehicleId == null || _selectedVehicleName == null) {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('Selecione o veículo.')));
@@ -156,10 +158,10 @@ class _DespesaPageState extends State<DespesaPage> {
 
     if (_selectedExpenseType == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
+        const SnackBar(
           behavior: SnackBarBehavior.floating,
           elevation: 0,
-          content: const Text('Preencha o tipo de despesa.'),
+          content: Text('Preencha o tipo de despesa.'),
         ),
       );
       return;
@@ -177,8 +179,10 @@ class _DespesaPageState extends State<DespesaPage> {
       final dateTime = _buildDateTime();
 
       if (widget.expenseId == null) {
+        // NOVA despesa
         await ExpenseService.instance.createExpense(
           vehicleId: _selectedVehicleId!,
+          vehicleName: _selectedVehicleName!, // <- usamos o nome aqui
           dateTime: dateTime,
           expenseType: _selectedExpenseType!,
           local: _localCtrl.text.trim(),
@@ -190,9 +194,11 @@ class _DespesaPageState extends State<DespesaPage> {
           value: value,
         );
       } else {
+        // EDIÇÃO de despesa existente
         await ExpenseService.instance.updateExpense(
           id: widget.expenseId!,
           vehicleId: _selectedVehicleId!,
+          vehicleName: _selectedVehicleName, // pode ser null, o service trata
           dateTime: dateTime,
           expenseType: _selectedExpenseType!,
           local: _localCtrl.text.trim(),
@@ -330,6 +336,17 @@ class _DespesaPageState extends State<DespesaPage> {
                   );
                 }
 
+                // Se estiver editando e o nome ainda não foi carregado, tenta achar pelo id
+                if (_selectedVehicleId != null &&
+                    _selectedVehicleName == null) {
+                  final match = vehicles.where(
+                    (v) => v.id == _selectedVehicleId,
+                  );
+                  if (match.isNotEmpty) {
+                    _selectedVehicleName = match.first.name;
+                  }
+                }
+
                 return Container(
                   decoration: BoxDecoration(
                     color: Colors.grey.shade200,
@@ -358,6 +375,16 @@ class _DespesaPageState extends State<DespesaPage> {
                     onChanged: (value) {
                       setState(() {
                         _selectedVehicleId = value;
+
+                        if (value != null) {
+                          final v = vehicles.firstWhere(
+                            (veh) => veh.id == value,
+                            orElse: () => vehicles.first,
+                          );
+                          _selectedVehicleName = v.name;
+                        } else {
+                          _selectedVehicleName = null;
+                        }
                       });
                     },
                     validator: (value) {

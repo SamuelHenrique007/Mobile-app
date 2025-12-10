@@ -78,7 +78,7 @@ class _VeiculosPageState extends State<VeiculosPage> {
         ),
         centerTitle: true,
         title: const Text(
-          'INICIO',
+          'VEÍCULOS',
           style: TextStyle(color: Colors.black87, letterSpacing: 1),
         ),
         actions: const [

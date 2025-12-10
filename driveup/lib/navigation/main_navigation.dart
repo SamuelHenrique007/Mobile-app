@@ -180,7 +180,10 @@ class _AddOptionsModal extends StatelessWidget {
                   letterSpacing: 1.2,
                 ),
               ),
-              const SizedBox(height: 8),
+
+              // ↓↓↓ Diminuímos o espaço para grudar no menu
+              const SizedBox(height: 12),
+
               Container(
                 width: 220,
                 decoration: BoxDecoration(
@@ -220,30 +223,6 @@ class _AddOptionsModal extends StatelessWidget {
                             builder: (_) => const DespesaPage(),
                           ),
                         );
-                      },
-                    ),
-                    const Divider(height: 1),
-                    _AddOptionTile(
-                      icon: Icons.attach_money,
-                      label: 'Receita',
-                      onTap: () {
-                        Navigator.pop(context);
-                      },
-                    ),
-                    const Divider(height: 1),
-                    _AddOptionTile(
-                      icon: Icons.build,
-                      label: 'Serviço',
-                      onTap: () {
-                        Navigator.pop(context);
-                      },
-                    ),
-                    const Divider(height: 1),
-                    _AddOptionTile(
-                      icon: Icons.alt_route,
-                      label: 'Percurso',
-                      onTap: () {
-                        Navigator.pop(context);
                       },
                     ),
                     const Divider(height: 1),

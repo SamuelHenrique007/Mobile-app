@@ -23,7 +23,7 @@ class NotificacoesPage extends StatelessWidget {
         ),
         centerTitle: true,
         title: const Text(
-          'INICIO',
+          'ALERTAS',
           style: TextStyle(color: Colors.black87, letterSpacing: 1),
         ),
         actions: const [

@@ -4,6 +4,11 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:driveup/screens/veiculos_page.dart';
 import 'package:driveup/navigation/main_navigation.dart'; 
 import 'package:driveup/screens/historico_abastecimento_page.dart';
+import 'package:driveup/screens/sobre_page.dart';
+import 'package:driveup/screens/postos_page.dart';
+import 'package:driveup/screens/locais_page.dart';
+import 'package:driveup/screens/historico_despesa_page.dart';
+
 
 class SideMenuPage extends StatelessWidget {
   const SideMenuPage({super.key});
@@ -54,28 +59,53 @@ class SideMenuPage extends StatelessWidget {
             );
           },
         ),
-          const _MenuTile(
+          _MenuTile(
             icon: Icons.local_gas_station,
             label: 'Postos de Combustíveis',
+            onTap: () {
+              Navigator.pop(context); // fecha o menu lateral
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => const FuelStationsPage(),
+                ),
+              );
+            },
           ),
-          const _MenuTile(
+          _MenuTile(
             icon: Icons.location_on_outlined,
             label: 'Locais',
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (_) => const ExpenseLocationsPage()),
+              );
+            },
           ),
-          const _MenuTile(
-            icon: Icons.description_outlined,
-            label: 'Despesas',
-          ),
+
+          _MenuTile(
+          icon: Icons.description_outlined,
+          label: 'Despesas',
+          onTap: () {
+            Navigator.pop(context);
+            Navigator.of(context).push(
+              MaterialPageRoute(
+                builder: (_) => const ExpenseHistoryPage(),
+              ),
+            );
+          },
+        ),
           const Divider(height: 28),
-          const _MenuTile(
-            icon: Icons.settings_outlined,
-            label: 'Configuração',
-            enabled: false,
-          ),
-          const _MenuTile(
+          _MenuTile(
             icon: Icons.info_outline,
             label: 'Sobre',
-            enabled: false,
+            onTap: () {
+              Navigator.pop(context); // fecha o sidemenu
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => const SobrePage(),
+                ),
+              );
+            },
           ),
         ],
       ),
