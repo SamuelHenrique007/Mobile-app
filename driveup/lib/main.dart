@@ -15,6 +15,7 @@ import 'screens/veiculos_page.dart';
 import 'screens/form_veiculo_page.dart';
 import 'screens/relatorios_page.dart';
 import 'screens/menu_dev_page.dart';
+import 'screens/perfil_page.dart';
 
 // navegação global
 import 'navigation/main_navigation.dart';
@@ -55,6 +56,7 @@ class MyApp extends StatelessWidget {
         '/relatorio': (context) => const RelatoriosPage(),
         // rota opcional se quiser chamar MainNavigation por nome
         '/main': (context) => const MainNavigation(),
+        '/perfil': (context) => const PerfilPage(),
       },
     );
   }

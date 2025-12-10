@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:driveup/screens/sidemenu_page.dart';
+import 'package:driveup/widgets/profile_avatar_button.dart';
+import 'package:driveup/screens/perfil_page.dart';
 
 class EmptyNotificationsPage extends StatelessWidget {
   const EmptyNotificationsPage({super.key});
@@ -16,9 +18,9 @@ class EmptyNotificationsPage extends StatelessWidget {
         leading: IconButton(
           icon: const Icon(Icons.menu, color: Colors.black87),
           onPressed: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const SideMenuPage()),
-              ); 
+            Navigator.of(
+              context,
+            ).push(MaterialPageRoute(builder: (_) => const SideMenuPage()));
           },
         ),
         centerTitle: true,
@@ -26,13 +28,22 @@ class EmptyNotificationsPage extends StatelessWidget {
           'INICIO',
           style: TextStyle(color: Colors.black87, letterSpacing: 1),
         ),
-        actions: const [
+        actions: [
           Padding(
-            padding: EdgeInsets.only(right: 12),
-            child: CircleAvatar(
-              radius: 16,
-              backgroundColor: Colors.orange,
-              child: Icon(Icons.person, color: Colors.white, size: 18),
+            padding: const EdgeInsets.only(right: 12),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(40),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const PerfilPage()),
+                );
+              },
+              child: const CircleAvatar(
+                radius: 16,
+                backgroundColor: Colors.orange,
+                child: Icon(Icons.person, color: Colors.white, size: 18),
+              ),
             ),
           ),
         ],
