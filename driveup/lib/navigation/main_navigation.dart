@@ -1,22 +1,16 @@
 import 'package:flutter/material.dart';
-
-// importa suas telas principais
 import 'package:driveup/screens/home_screen.dart';
 import 'package:driveup/screens/veiculos_page.dart';
 import 'package:driveup/screens/relatorios_page.dart';
 import 'package:driveup/screens/notificacoes_page.dart';
 import 'package:driveup/screens/abastecimento_page.dart';
 import 'package:driveup/screens/despesa_page.dart';
+import 'package:driveup/screens/reminder_form_page.dart';
 
 class MainNavigation extends StatefulWidget {
-  /// índice inicial da aba:
-  /// 0 = Início, 1 = Relatórios, 3 = Alertas, 4 = Veículos
   final int initialIndex;
 
-  const MainNavigation({
-    super.key,
-    this.initialIndex = 0, // padrão: aba Início
-  });
+  const MainNavigation({super.key, this.initialIndex = 0});
 
   @override
   State<MainNavigation> createState() => _MainNavigationState();
@@ -27,17 +21,17 @@ class _MainNavigationState extends State<MainNavigation> {
 
   // Telas controladas pela bottom bar
   final screens = const [
-    HomePage(),        // 0 - Início
-    RelatoriosPage(),  // 1 - Relatórios
-    SizedBox(),        // 2 - espaço do botão +
-    NotificacoesPage(),// 3 - Alertas
-    VeiculosPage(),    // 4 - Veículos
+    HomePage(),
+    RelatoriosPage(),
+    SizedBox(),
+    NotificacoesPage(),
+    VeiculosPage(),
   ];
 
   @override
   void initState() {
     super.initState();
-    _index = widget.initialIndex; // 👈 pega o índice inicial vindo de fora
+    _index = widget.initialIndex;
   }
 
   void _onMenuTap(int i) {
@@ -231,6 +225,11 @@ class _AddOptionsModal extends StatelessWidget {
                       label: 'Lembrete',
                       onTap: () {
                         Navigator.pop(context);
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (_) => const ReminderFormPage(),
+                          ),
+                        );
                       },
                     ),
                   ],
