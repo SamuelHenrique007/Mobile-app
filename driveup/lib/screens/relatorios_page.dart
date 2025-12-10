@@ -11,9 +11,11 @@ class RelatoriosPage extends StatefulWidget {
 }
 
 enum ReportType { geral, abastecimento, despesa }
+enum ChartType { circle, bar }
 
 class _RelatoriosPageState extends State<RelatoriosPage> {
   ReportType current = ReportType.geral;
+  ChartType _chartType = ChartType.circle;
 
   final List<String> _months = const [
     'JANEIRO',
@@ -36,14 +38,12 @@ class _RelatoriosPageState extends State<RelatoriosPage> {
     setState(() {
       _monthIndex = (_monthIndex - 1) % 12;
       if (_monthIndex < 0) _monthIndex += 12;
-      // se quiser, pode ajustar ano aqui depois
     });
   }
 
   void _nextMonth() {
     setState(() {
       _monthIndex = (_monthIndex + 1) % 12;
-      // se quiser, pode ajustar ano aqui depois
     });
   }
 
@@ -59,9 +59,8 @@ class _RelatoriosPageState extends State<RelatoriosPage> {
         leading: IconButton(
           icon: const Icon(Icons.menu, color: Colors.black87),
           onPressed: () {
-            Navigator.of(
-              context,
-            ).push(MaterialPageRoute(builder: (_) => const SideMenuPage()));
+            Navigator.of(context)
+                .push(MaterialPageRoute(builder: (_) => const SideMenuPage()));
           },
         ),
         centerTitle: true,
@@ -97,9 +96,15 @@ class _RelatoriosPageState extends State<RelatoriosPage> {
         builder: (context, snapshot) {
           final isLoading =
               snapshot.connectionState == ConnectionState.waiting &&
-              !snapshot.hasData;
+                  !snapshot.hasData;
 
-          final summary = snapshot.data ?? MonthlySummary.empty();
+          final summary = snapshot.data ??
+              MonthlySummary(
+                fuelTotal: 0,
+                expenseTotal: 0,
+                kmTotal: 0,
+                kmDailyAvg: 0,
+              );
 
           // 🔹 Sempre usar o GERAL para o gráfico
           final fuel = summary.fuelTotal;
@@ -117,7 +122,7 @@ class _RelatoriosPageState extends State<RelatoriosPage> {
             final expenseFrac = (expense / total).clamp(0.0, 1.0);
             donutSegments = [
               DonutSegment(value: fuelFrac, color: const Color(0xFFFFC107)),
-              DonutSegment(value: expenseFrac, color: Colors.red),
+              DonutSegment(value: expenseFrac, color: Colors.redAccent),
             ];
           }
 
@@ -162,88 +167,85 @@ class _RelatoriosPageState extends State<RelatoriosPage> {
                       Row(
                         children: [
                           const Spacer(),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 10,
-                              vertical: 6,
-                            ),
-                            decoration: BoxDecoration(
-                              color: Colors.black.withOpacity(.06),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: const [
-                                Text('Círculo', style: TextStyle(fontSize: 12)),
-                                Icon(Icons.arrow_drop_down, size: 18),
-                              ],
+                          // 🔽 Seletor Círculo / Barras
+                          PopupMenuButton<ChartType>(
+                            onSelected: (value) {
+                              setState(() => _chartType = value);
+                            },
+                            itemBuilder: (_) => const [
+                              PopupMenuItem(
+                                value: ChartType.circle,
+                                child: Text('Círculo'),
+                              ),
+                              PopupMenuItem(
+                                value: ChartType.bar,
+                                child: Text('Barras'),
+                              ),
+                            ],
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 6,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Colors.black.withOpacity(.06),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    _chartType == ChartType.circle
+                                        ? 'Círculo'
+                                        : 'Barras',
+                                    style: const TextStyle(fontSize: 12),
+                                  ),
+                                  const Icon(Icons.arrow_drop_down, size: 18),
+                                ],
+                              ),
                             ),
                           ),
                         ],
                       ),
                       const SizedBox(height: 12),
+
+                      // 🔹 Aqui muda o layout conforme o tipo de gráfico
                       SizedBox(
                         height: 220,
-                        child: Stack(
-                          alignment: Alignment.center,
-                          children: [
-                            // ⭐ AQUI o gráfico SEMPRE usa o geral (donutSegments)
-                            DonutChart(
-                              segments: donutSegments,
-                              thickness: 26,
-                              gap: 4,
-                            ),
-                            Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                GestureDetector(
-                                  onTap: _prevMonth,
-                                  child: const Padding(
-                                    padding: EdgeInsets.symmetric(
-                                      horizontal: 8,
-                                      vertical: 6,
-                                    ),
-                                    child: Text(
-                                      '<',
-                                      style: TextStyle(
-                                        fontSize: 16,
-                                        color: Colors.black87,
-                                      ),
+                        child: _chartType == ChartType.circle
+                            ? Stack(
+                                alignment: Alignment.center,
+                                children: [
+                                  DonutChart(
+                                    segments: donutSegments,
+                                    thickness: 26,
+                                    gap: 4,
+                                  ),
+                                  _MonthSelector(
+                                    label: _months[_monthIndex],
+                                    onPrev: _prevMonth,
+                                    onNext: _nextMonth,
+                                  ),
+                                ],
+                              )
+                            : Column(
+                                children: [
+                                  _MonthSelector(
+                                    label: _months[_monthIndex],
+                                    onPrev: _prevMonth,
+                                    onNext: _nextMonth,
+                                  ),
+                                  const SizedBox(height: 12),
+                                  Expanded(
+                                    child: _BarSummaryChart(
+                                      fuel: fuel,
+                                      expense: expense,
                                     ),
                                   ),
-                                ),
-                                const SizedBox(width: 12),
-                                Text(
-                                  _months[_monthIndex],
-                                  style: const TextStyle(
-                                    fontSize: 16,
-                                    letterSpacing: .8,
-                                    fontWeight: FontWeight.w600,
-                                    color: Colors.black87,
-                                  ),
-                                ),
-                                const SizedBox(width: 12),
-                                GestureDetector(
-                                  onTap: _nextMonth,
-                                  child: const Padding(
-                                    padding: EdgeInsets.symmetric(
-                                      horizontal: 8,
-                                      vertical: 6,
-                                    ),
-                                    child: Text(
-                                      '>',
-                                      style: TextStyle(
-                                        fontSize: 16,
-                                        color: Colors.black87,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
+                                ],
+                              ),
                       ),
+
                       const SizedBox(height: 12),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceAround,
@@ -292,17 +294,16 @@ class _RelatoriosPageState extends State<RelatoriosPage> {
   }
 
   _ReportData _buildReportData(MonthlySummary summary, ReportType t) {
-    final daysInMonth = DateUtils.getDaysInMonth(
-      _year,
-      _monthIndex + 1,
-    ).toDouble();
+    final daysInMonth =
+        DateUtils.getDaysInMonth(_year, _monthIndex + 1).toDouble();
 
     final fuel = summary.fuelTotal;
     final expense = summary.expenseTotal;
+    final kmTotal = summary.kmTotal;
+    final kmMedia = summary.kmDailyAvg;
 
     double totalMoney;
 
-    // 🔹 Só os valores mudam conforme o filtro
     switch (t) {
       case ReportType.geral:
         totalMoney = fuel + expense;
@@ -316,18 +317,12 @@ class _RelatoriosPageState extends State<RelatoriosPage> {
     }
 
     final porDia = daysInMonth > 0 ? totalMoney / daysInMonth : 0.0;
-
-    // km vindos do SummaryService
-    final kmTotal = summary.kmTotal;
-    final kmMedia = summary.kmDailyAvg;
-
-    // R$/KM depende do filtro atual
-    final custoPorKm = kmTotal > 0 ? totalMoney / kmTotal : 0.0;
+    final porKm = kmTotal > 0 ? totalMoney / kmTotal : 0.0;
 
     return _ReportData(
       totalStr: _fmtMoney(totalMoney),
       porDiaStr: _fmtMoney(porDia),
-      porKmStr: _fmtMoney(custoPorKm),
+      porKmStr: _fmtMoney(porKm),
       kmTotalStr: _fmtInt(kmTotal),
       kmMediaStr: _fmtInt(kmMedia),
     );
@@ -423,9 +418,8 @@ class _StatsCard extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: children
-              .map((w) => Expanded(child: Center(child: w)))
-              .toList(),
+          children:
+              children.map((w) => Expanded(child: Center(child: w))).toList(),
         ),
       ),
     );
@@ -552,12 +546,12 @@ class DonutChart extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final double size =
-            constraints.maxHeight.isFinite && constraints.maxHeight > 0
-                ? constraints.maxHeight
-                : (constraints.maxWidth.isFinite && constraints.maxWidth > 0
-                    ? constraints.maxWidth
-                    : 200);
+        final double size = constraints.maxHeight.isFinite &&
+                constraints.maxHeight > 0
+            ? constraints.maxHeight
+            : (constraints.maxWidth.isFinite && constraints.maxWidth > 0
+                ? constraints.maxWidth
+                : 200);
         return Center(
           child: SizedBox(
             width: size,
@@ -622,5 +616,158 @@ class _DonutPainter extends CustomPainter {
     return old.segments != segments ||
         old.thickness != thickness ||
         old.gap != gap;
+  }
+}
+
+/// Row com "< DEZEMBRO >"
+class _MonthSelector extends StatelessWidget {
+  final String label;
+  final VoidCallback onPrev;
+  final VoidCallback onNext;
+
+  const _MonthSelector({
+    required this.label,
+    required this.onPrev,
+    required this.onNext,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        GestureDetector(
+          onTap: onPrev,
+          child: const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+            child: Text(
+              '<',
+              style: TextStyle(fontSize: 16, color: Colors.black87),
+            ),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Text(
+          label,
+          style: const TextStyle(
+            fontSize: 16,
+            letterSpacing: .8,
+            fontWeight: FontWeight.w600,
+            color: Colors.black87,
+          ),
+        ),
+        const SizedBox(width: 12),
+        GestureDetector(
+          onTap: onNext,
+          child: const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+            child: Text(
+              '>',
+              style: TextStyle(fontSize: 16, color: Colors.black87),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+/// Gráfico de barras simples: Abastecimento x Despesas
+class _BarSummaryChart extends StatelessWidget {
+  final double fuel;
+  final double expense;
+
+  const _BarSummaryChart({
+    required this.fuel,
+    required this.expense,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    const yellow = Color(0xFFFFC107);
+    final red = Colors.redAccent;
+
+    final maxValue = [fuel, expense, 0].reduce((a, b) => a > b ? a : b);
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final height = constraints.maxHeight;
+        final barMaxHeight = height * 0.7;
+
+        double _barHeight(double value) {
+          if (maxValue <= 0) return barMaxHeight * 0.1;
+          return (value / maxValue) * barMaxHeight;
+        }
+
+        return Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 40),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Expanded(
+                child: _BarItem(
+                  color: yellow,
+                  value: fuel,
+                  height: _barHeight(fuel),
+                  label: 'Abast.',
+                ),
+              ),
+              const SizedBox(width: 24),
+              Expanded(
+                child: _BarItem(
+                  color: red,
+                  value: expense,
+                  height: _barHeight(expense),
+                  label: 'Desp.',
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _BarItem extends StatelessWidget {
+  final Color color;
+  final double value;
+  final double height;
+  final String label;
+
+  const _BarItem({
+    required this.color,
+    required this.value,
+    required this.height,
+    required this.label,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final text = value.toStringAsFixed(0).replaceAll('.', ',');
+
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.end,
+      children: [
+        Text(
+          'R\$ $text',
+          style: const TextStyle(fontSize: 11),
+        ),
+        const SizedBox(height: 4),
+        Container(
+          height: height,
+          decoration: BoxDecoration(
+            color: color,
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          label,
+          style: const TextStyle(fontSize: 11),
+        ),
+      ],
+    );
   }
 }
