@@ -45,14 +45,7 @@ class _VeiculosPageState extends State<VeiculosPage> {
         SnackBar(
           content: const Text('Veículo excluído.'),
           behavior: SnackBarBehavior.floating,
-          margin: const EdgeInsets.only(
-            left: 16,
-            right: 16,
-            bottom: kBottomNavigationBarHeight + 16,
-          ),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
+          elevation: 0,
         ),
       );
     } catch (e) {
@@ -61,14 +54,7 @@ class _VeiculosPageState extends State<VeiculosPage> {
         SnackBar(
           content: Text('Erro ao excluir veículo: $e'),
           behavior: SnackBarBehavior.floating,
-          margin: const EdgeInsets.only(
-            left: 16,
-            right: 16,
-            bottom: kBottomNavigationBarHeight + 16,
-          ),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
+          elevation: 0,
           backgroundColor: Colors.red.shade700,
         ),
       );
@@ -85,9 +71,9 @@ class _VeiculosPageState extends State<VeiculosPage> {
         leading: IconButton(
           icon: const Icon(Icons.menu, color: Colors.black87),
           onPressed: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const SideMenuPage()),
-              );
+            Navigator.of(
+              context,
+            ).push(MaterialPageRoute(builder: (_) => const SideMenuPage()));
           },
         ),
         centerTitle: true,

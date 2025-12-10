@@ -103,22 +103,14 @@ class _FormVeiculoPageState extends State<FormVeiculoPage> {
 
       if (!mounted) return;
 
-      // ✅ SnackBar flutuante (não empurra o FAB / bottom bar)
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
+          behavior: SnackBarBehavior.floating,
+          elevation: 0,
           content: Text(
             isEditing
                 ? 'Veículo atualizado com sucesso!'
                 : 'Veículo salvo com sucesso!',
-          ),
-          behavior: SnackBarBehavior.floating,
-          margin: const EdgeInsets.only(
-            left: 16,
-            right: 16,
-            bottom: kBottomNavigationBarHeight + 16,
-          ),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
           ),
         ),
       );
@@ -154,7 +146,6 @@ class _FormVeiculoPageState extends State<FormVeiculoPage> {
     final isEditing = _editingVehicle != null;
 
     return Scaffold(
-      // sem bottom bar e sem FAB – quem cuida disso é o MainNavigation
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: .5,

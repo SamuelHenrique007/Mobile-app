@@ -5,6 +5,8 @@ import 'package:intl/intl.dart';
 import 'package:driveup/services/vehicle_service.dart';
 import 'package:driveup/services/expense_service.dart';
 import 'package:driveup/services/fuel_service.dart';
+import 'package:driveup/screens/despesa_page.dart';
+import 'package:driveup/screens/abastecimento_page.dart';
 
 class VehicleHistoryPage extends StatelessWidget {
   final Vehicle vehicle;
@@ -36,6 +38,86 @@ class VehicleHistoryPage extends StatelessWidget {
       return '${value.toStringAsFixed(2).replaceAll('.', ',')} L';
     }
     return '-';
+  }
+
+  Future<void> _confirmDeleteFuel(
+    BuildContext context,
+    FuelRecord record,
+  ) async {
+    final ok =
+        await showDialog<bool>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: const Text('Excluir abastecimento'),
+            content: const Text('Deseja realmente excluir este registro?'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: const Text('Cancelar'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                child: const Text(
+                  'Excluir',
+                  style: TextStyle(color: Colors.redAccent),
+                ),
+              ),
+            ],
+          ),
+        ) ??
+        false;
+
+    if (!ok) return;
+
+    await FuelService.instance.deleteFuel(record.id);
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        behavior: SnackBarBehavior.floating,
+        elevation: 0,
+        content: Text('Abastecimento excluído.'),
+      ),
+    );
+  }
+
+  Future<void> _confirmDeleteExpense(
+    BuildContext context,
+    ExpenseRecord record,
+  ) async {
+    final ok =
+        await showDialog<bool>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: const Text('Excluir despesa'),
+            content: const Text('Deseja realmente excluir esta despesa?'),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: const Text('Cancelar'),
+              ),
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                child: const Text(
+                  'Excluir',
+                  style: TextStyle(color: Colors.redAccent),
+                ),
+              ),
+            ],
+          ),
+        ) ??
+        false;
+
+    if (!ok) return;
+
+    await ExpenseService.instance.deleteExpense(record.id);
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        behavior: SnackBarBehavior.floating,
+        elevation: 0,
+        content: Text('Despesa excluída.'),
+      ),
+    );
   }
 
   @override
@@ -121,7 +203,7 @@ class VehicleHistoryPage extends StatelessWidget {
           const _SectionHeader('ABASTECIMENTOS'),
           const SizedBox(height: 8),
 
-          StreamBuilder<List<Map<String, dynamic>>>(
+          StreamBuilder<List<FuelRecord>>(
             stream: FuelService.instance.fuelsByVehicleStream(vehicle.id),
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
@@ -153,7 +235,8 @@ class VehicleHistoryPage extends StatelessWidget {
               }
 
               return Column(
-                children: items.map((fuel) {
+                children: items.map((record) {
+                  final fuel = record.data;
                   final dateTime = fuel['dateTime'];
                   final total = fuel['totalPrice'];
                   final liters = fuel['liters'];
@@ -183,6 +266,31 @@ class VehicleHistoryPage extends StatelessWidget {
                         style: const TextStyle(fontSize: 12.5),
                       ),
                       isThreeLine: true,
+                      trailing: PopupMenuButton<String>(
+                        onSelected: (value) {
+                          if (value == 'edit') {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => AbastecimentoPage(
+                                  // você precisa garantir que sua página aceite esses params
+                                  fuelId: record.id,
+                                  initialData: fuel,
+                                ),
+                              ),
+                            );
+                          } else if (value == 'delete') {
+                            _confirmDeleteFuel(context, record);
+                          }
+                        },
+                        itemBuilder: (ctx) => const [
+                          PopupMenuItem(value: 'edit', child: Text('Editar')),
+                          PopupMenuItem(
+                            value: 'delete',
+                            child: Text('Excluir'),
+                          ),
+                        ],
+                      ),
                     ),
                   );
                 }).toList(),
@@ -194,7 +302,7 @@ class VehicleHistoryPage extends StatelessWidget {
           const _SectionHeader('DESPESAS'),
           const SizedBox(height: 8),
 
-          StreamBuilder<List<Map<String, dynamic>>>(
+          StreamBuilder<List<ExpenseRecord>>(
             stream: ExpenseService.instance.expensesByVehicleStream(vehicle.id),
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
@@ -226,7 +334,8 @@ class VehicleHistoryPage extends StatelessWidget {
               }
 
               return Column(
-                children: items.map((exp) {
+                children: items.map((record) {
+                  final exp = record.data;
                   final type = exp['expenseType'] ?? '-';
                   final value = exp['value'];
                   final local = exp['local'] ?? '-';
@@ -255,6 +364,30 @@ class VehicleHistoryPage extends StatelessWidget {
                         style: const TextStyle(fontSize: 12.5),
                       ),
                       isThreeLine: true,
+                      trailing: PopupMenuButton<String>(
+                        onSelected: (valueMenu) {
+                          if (valueMenu == 'edit') {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => DespesaPage(
+                                  expenseId: record.id,
+                                  initialData: exp,
+                                ),
+                              ),
+                            );
+                          } else if (valueMenu == 'delete') {
+                            _confirmDeleteExpense(context, record);
+                          }
+                        },
+                        itemBuilder: (ctx) => const [
+                          PopupMenuItem(value: 'edit', child: Text('Editar')),
+                          PopupMenuItem(
+                            value: 'delete',
+                            child: Text('Excluir'),
+                          ),
+                        ],
+                      ),
                     ),
                   );
                 }).toList(),
