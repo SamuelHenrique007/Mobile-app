@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
+import 'package:driveup/services/notification_service.dart';
 
 // telas
 import 'screens/splash_screen.dart';
@@ -59,5 +60,17 @@ class MyApp extends StatelessWidget {
         '/perfil': (context) => const PerfilPage(),
       },
     );
+  }
+
+  Future<void> main() async {
+    WidgetsFlutterBinding.ensureInitialized();
+
+    // inicializa notificações locais
+    await NotificationService.instance.init();
+
+    // aqui você já deve ter Firebase.initializeApp() etc
+    // await Firebase.initializeApp(...);
+
+    runApp(const MyApp());
   }
 }
