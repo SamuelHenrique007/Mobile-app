@@ -56,33 +56,6 @@ Inclui dashboards interativos, histórico detalhado, área de perfil e integraç
 
 ---
 
-## 📂 Arquitetura do Projeto
-
-lib/
-├─ navigation/
-│   └─ main_navigation.dart
-├─ screens/
-│   ├─ home_page.dart
-│   ├─ abastecimento_page.dart
-│   ├─ despesa_page.dart
-│   ├─ veiculos_page.dart
-│   ├─ notificacoes_page.dart
-│   ├─ empty_notifications_page.dart
-│   ├─ perfil_page.dart
-│   ├─ vehicle_history_page.dart
-│   └─ sidemenu_page.dart
-├─ services/
-│   ├─ vehicle_service.dart
-│   ├─ expense_service.dart
-│   ├─ fuel_service.dart
-│   ├─ summary_service.dart
-│   ├─ reminder_service.dart
-│   └─ notification_service.dart
-├─ widgets/
-│   ├─ profile_avatar_button.dart
-│   └─ custom_inputs.dart
-└─ main.dart
-
 ## 🔧 Como Rodar o Projeto
 
     1. Instale as dependências
@@ -104,7 +77,8 @@ lib/
             Cloud Firestore
 
     3. Execute o app
-flutter run
+    
+        flutter run
 
 ## 🔒 Segurança e Boas Práticas
 
@@ -114,5 +88,9 @@ users/{uid}/vehicles
 users/{uid}/expenses
 users/{uid}/fuels
 users/{uid}/reminders
+
+## 👨‍💻 Autor
+
+Desenvolvido por Élber, Samuel e Yuri
 
 
