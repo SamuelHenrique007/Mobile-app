@@ -84,13 +84,17 @@ Inclui dashboards interativos, histórico detalhado, área de perfil e integraç
 
 As coleções seguem a estrutura:
 
-users/{uid}/vehicles
-users/{uid}/expenses
-users/{uid}/fuels
-users/{uid}/reminders
+- users/{uid}/vehicles
+- users/{uid}/expenses 
+- users/{uid}/fuels  
+- users/{uid}/reminders
 
 ## 👨‍💻 Autor
 
 Desenvolvido por Élber, Samuel e Yuri
+
+## Links
+
+slide: https://www.canva.com/design/DAG7DfDrPYI/wuHhM8bqRC0ImS0bLWFp1g/edit?utm_content=DAG7DfDrPYI&utm_campaign=designshare&utm_medium=link2&utm_source=sharebutton
 
 
