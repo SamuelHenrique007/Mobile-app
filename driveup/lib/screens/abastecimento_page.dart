@@ -23,6 +23,7 @@ class _AbastecimentoPageState extends State<AbastecimentoPage> {
   final _fuelTypes = ['Gasolina', 'Etanol', 'Diesel', 'GNV'];
 
   String? _selectedVehicleId;
+  String? _selectedVehicleName; // <- novo: guarda o nome do veículo selecionado
   bool _isSaving = false;
 
   @override
@@ -108,7 +109,7 @@ class _AbastecimentoPageState extends State<AbastecimentoPage> {
   Future<void> _onSave() async {
     if (_isSaving) return;
 
-    if (_selectedVehicleId == null) {
+    if (_selectedVehicleId == null || _selectedVehicleName == null) {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text('Selecione o veículo.')));
@@ -139,6 +140,7 @@ class _AbastecimentoPageState extends State<AbastecimentoPage> {
 
       await FuelService.instance.createFuel(
         vehicleId: _selectedVehicleId!,
+        vehicleName: _selectedVehicleName!, // <- aqui usamos o nome
         dateTime: dateTime,
         fuelType: _fuelType,
         odometer: odometer,
@@ -284,6 +286,13 @@ class _AbastecimentoPageState extends State<AbastecimentoPage> {
                   onChanged: (value) {
                     setState(() {
                       _selectedVehicleId = value;
+
+                      // pega também o nome do veículo selecionado
+                      final v = vehicles.firstWhere(
+                        (veh) => veh.id == value,
+                        orElse: () => vehicles.first,
+                      );
+                      _selectedVehicleName = v.name;
                     });
                   },
                 ),

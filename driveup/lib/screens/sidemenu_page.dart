@@ -1,4 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:driveup/screens/veiculos_page.dart';
+import 'package:driveup/navigation/main_navigation.dart'; 
+import 'package:driveup/screens/historico_abastecimento_page.dart';
 
 class SideMenuPage extends StatelessWidget {
   const SideMenuPage({super.key});
@@ -18,83 +23,50 @@ class SideMenuPage extends StatelessWidget {
       body: ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
         children: [
-          // Header: avatar + nome/email
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              const CircleAvatar(
-                radius: 36,
-                backgroundColor: Colors.amber,
-                // se tiver sua imagem: backgroundImage: AssetImage('assets/avatar.png'),
-                child: CircleAvatar(
-                  radius: 34,
-                  backgroundColor: Colors.white,
-                  child: CircleAvatar(
-                    radius: 32,
-                    backgroundColor: Colors.amber,
-                    child: Icon(Icons.person, color: Colors.white, size: 40),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              const Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Power Guido',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w800,
-                          color: Colors.black87,
-                        )),
-                    SizedBox(height: 2),
-                    Text('exemple@email.com',
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: Colors.black54,
-                        )),
-                  ],
-                ),
-              ),
-            ],
-          ),
-
+          const _UserHeader(),
           const SizedBox(height: 16),
 
-          // Itens principais
           _MenuTile(
             icon: Icons.directions_car_outlined,
             label: 'Meus veículos',
             onTap: () {
-              // TODO: navegue para a tela de veículos
+              Navigator.pop(context);
+              Navigator.of(context).pushAndRemoveUntil(
+                MaterialPageRoute(
+                  builder: (_) => const MainNavigation(initialIndex: 4),
+                ),
+                (route) => false, // remove todas as rotas anteriores
+              );
             },
           ),
+
+
           const Divider(height: 24),
           _MenuTile(
             icon: Icons.local_gas_station_outlined,
-            label: 'Combustíveis',
+            label: 'Abastecimentos',
             onTap: () {
-              // TODO: cadastros de combustíveis
-            },
-          ),
-          _MenuTile(
-            icon: Icons.local_gas_station, // pode repetir para "postos"
+              Navigator.pop(context); // fecha o SideMenu
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (_) => const FuelHistoryPage(),
+              ),
+            );
+          },
+        ),
+          const _MenuTile(
+            icon: Icons.local_gas_station,
             label: 'Postos de Combustíveis',
-            onTap: () {},
           ),
-          _MenuTile(
+          const _MenuTile(
             icon: Icons.location_on_outlined,
             label: 'Locais',
-            onTap: () {},
           ),
-          _MenuTile(
+          const _MenuTile(
             icon: Icons.description_outlined,
-            label: 'Tipo de Despesa',
-            onTap: () {},
+            label: 'Despesas',
           ),
           const Divider(height: 28),
-
-          // Itens desabilitados (acinzentados)
           const _MenuTile(
             icon: Icons.settings_outlined,
             label: 'Configuração',
@@ -106,6 +78,170 @@ class SideMenuPage extends StatelessWidget {
             enabled: false,
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _UserHeader extends StatelessWidget {
+  const _UserHeader();
+
+  @override
+  Widget build(BuildContext context) {
+    final user = FirebaseAuth.instance.currentUser;
+
+    if (user == null) {
+      return Row(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: const [
+          _Avatar(),
+          SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Convidado',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w800,
+                    color: Colors.black87,
+                  ),
+                ),
+                SizedBox(height: 2),
+                Text(
+                  'Nenhum usuário autenticado',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: Colors.black54,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      );
+    }
+
+    final docStream = FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .snapshots();
+
+    return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+      stream: docStream,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting &&
+            !snapshot.hasData) {
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: const [
+              _Avatar(),
+              SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  'Carregando...',
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Colors.black54,
+                  ),
+                ),
+              ),
+            ],
+          );
+        }
+
+        if (!snapshot.hasData || !snapshot.data!.exists) {
+          final email = user.email ?? '';
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              const _Avatar(),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      email.isNotEmpty ? email : 'Usuário',
+                      style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    const Text(
+                      'Sem dados de perfil',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Colors.black54,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          );
+        }
+
+        final data = snapshot.data!.data()!;
+        final name = (data['name'] ?? '') as String;
+        final email = (data['email'] ?? user.email ?? '') as String;
+
+        return Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            const _Avatar(),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    name.isEmpty
+                        ? (email.isNotEmpty ? email : 'Usuário')
+                        : name,
+                    style: const TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w800,
+                      color: Colors.black87,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    email,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      color: Colors.black54,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+}
+
+class _Avatar extends StatelessWidget {
+  const _Avatar();
+
+  @override
+  Widget build(BuildContext context) {
+    return const CircleAvatar(
+      radius: 36,
+      backgroundColor: Colors.amber,
+      child: CircleAvatar(
+        radius: 34,
+        backgroundColor: Colors.white,
+        child: CircleAvatar(
+          radius: 32,
+          backgroundColor: Colors.amber,
+          child: Icon(Icons.person, color: Colors.white, size: 40),
+        ),
       ),
     );
   }

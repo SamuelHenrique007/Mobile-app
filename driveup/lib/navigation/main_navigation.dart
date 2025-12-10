@@ -9,23 +9,36 @@ import 'package:driveup/screens/abastecimento_page.dart';
 import 'package:driveup/screens/despesa_page.dart';
 
 class MainNavigation extends StatefulWidget {
-  const MainNavigation({super.key});
+  /// índice inicial da aba:
+  /// 0 = Início, 1 = Relatórios, 3 = Alertas, 4 = Veículos
+  final int initialIndex;
+
+  const MainNavigation({
+    super.key,
+    this.initialIndex = 0, // padrão: aba Início
+  });
 
   @override
   State<MainNavigation> createState() => _MainNavigationState();
 }
 
 class _MainNavigationState extends State<MainNavigation> {
-  int _index = 0;
+  late int _index;
 
   // Telas controladas pela bottom bar
   final screens = const [
-    HomePage(), // 0 - Início
-    RelatoriosPage(), // 1 - Registros (ou Relatórios)
-    SizedBox(), // 2 - espaço do botão +
-    NotificacoesPage(), // 3 - Alertas
-    VeiculosPage(), // 4 - Veículos
+    HomePage(),        // 0 - Início
+    RelatoriosPage(),  // 1 - Relatórios
+    SizedBox(),        // 2 - espaço do botão +
+    NotificacoesPage(),// 3 - Alertas
+    VeiculosPage(),    // 4 - Veículos
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    _index = widget.initialIndex; // 👈 pega o índice inicial vindo de fora
+  }
 
   void _onMenuTap(int i) {
     if (i == 2) return; // posição do botão + (não faz nada aqui)
@@ -76,7 +89,7 @@ class _MainNavigationState extends State<MainNavigation> {
               ),
               _NavItem(
                 icon: Icons.receipt_long_outlined,
-                label: 'Registros',
+                label: 'Relatórios',
                 selected: _index == 1,
                 onTap: () => _onMenuTap(1),
               ),
@@ -143,7 +156,7 @@ class _NavItem extends StatelessWidget {
   }
 }
 
-/// ====== MODAL DO BOTÃO + (igual ao conceito da sua UI) ======
+/// ====== MODAL DO BOTÃO + ======
 
 class _AddOptionsModal extends StatelessWidget {
   const _AddOptionsModal({super.key});
@@ -194,7 +207,6 @@ class _AddOptionsModal extends StatelessWidget {
                             builder: (_) => const AbastecimentoPage(),
                           ),
                         );
-                        // TODO: navegar para tela de Abastecimento
                       },
                     ),
                     const Divider(height: 1),
