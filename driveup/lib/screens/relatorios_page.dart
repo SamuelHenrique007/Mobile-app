@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:driveup/screens/sidemenu_page.dart';
 import 'package:driveup/services/summary_service.dart';
+import 'package:driveup/widgets/profile_avatar_button.dart';
+import 'package:driveup/screens/perfil_page.dart';
 
 class RelatoriosPage extends StatefulWidget {
   const RelatoriosPage({super.key});
@@ -56,9 +58,9 @@ class _RelatoriosPageState extends State<RelatoriosPage> {
         leading: IconButton(
           icon: const Icon(Icons.menu, color: Colors.black87),
           onPressed: () {
-            Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const SideMenuPage()),
-            );
+            Navigator.of(
+              context,
+            ).push(MaterialPageRoute(builder: (_) => const SideMenuPage()));
           },
         ),
         centerTitle: true,
@@ -66,13 +68,22 @@ class _RelatoriosPageState extends State<RelatoriosPage> {
           'RELATÓRIOS',
           style: TextStyle(color: Colors.black87, letterSpacing: 1),
         ),
-        actions: const [
+        actions: [
           Padding(
-            padding: EdgeInsets.only(right: 12),
-            child: CircleAvatar(
-              radius: 16,
-              backgroundColor: Colors.orange,
-              child: Icon(Icons.person, color: Colors.white, size: 18),
+            padding: const EdgeInsets.only(right: 12),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(40),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const PerfilPage()),
+                );
+              },
+              child: const CircleAvatar(
+                radius: 16,
+                backgroundColor: Colors.orange,
+                child: Icon(Icons.person, color: Colors.white, size: 18),
+              ),
             ),
           ),
         ],
@@ -87,11 +98,8 @@ class _RelatoriosPageState extends State<RelatoriosPage> {
               snapshot.connectionState == ConnectionState.waiting &&
               !snapshot.hasData;
 
-          final summary = snapshot.data ??
-              MonthlySummary(
-                fuelTotal: 0,
-                expenseTotal: 0,
-              );
+          final summary =
+              snapshot.data ?? MonthlySummary(fuelTotal: 0, expenseTotal: 0);
 
           // 🔹 Sempre usar o GERAL para o gráfico
           final fuel = summary.fuelTotal;
@@ -108,14 +116,8 @@ class _RelatoriosPageState extends State<RelatoriosPage> {
             final fuelFrac = (fuel / total).clamp(0.0, 1.0);
             final expenseFrac = (expense / total).clamp(0.0, 1.0);
             donutSegments = [
-              DonutSegment(
-                value: fuelFrac,
-                color: const Color(0xFFFFC107),
-              ),
-              DonutSegment(
-                value: expenseFrac,
-                color: Colors.red.shade600,
-              ),
+              DonutSegment(value: fuelFrac, color: const Color(0xFFFFC107)),
+              DonutSegment(value: expenseFrac, color: Colors.red.shade600),
             ];
           }
 
@@ -290,8 +292,10 @@ class _RelatoriosPageState extends State<RelatoriosPage> {
   }
 
   _ReportData _buildReportData(MonthlySummary summary, ReportType t) {
-    final daysInMonth =
-        DateUtils.getDaysInMonth(_year, _monthIndex + 1).toDouble();
+    final daysInMonth = DateUtils.getDaysInMonth(
+      _year,
+      _monthIndex + 1,
+    ).toDouble();
 
     final fuel = summary.fuelTotal;
     final expense = summary.expenseTotal;
@@ -326,8 +330,7 @@ class _RelatoriosPageState extends State<RelatoriosPage> {
     );
   }
 
-  String _fmtMoney(double v) =>
-      v.toStringAsFixed(2).replaceAll('.', ',');
+  String _fmtMoney(double v) => v.toStringAsFixed(2).replaceAll('.', ',');
 
   String _fmtInt(double v) => v.toStringAsFixed(0);
 }
@@ -392,8 +395,7 @@ class _ReportChips extends StatelessWidget {
             side: BorderSide.none,
             onSelected: (_) => onChanged(type),
             showCheckmark: false,
-            visualDensity:
-                const VisualDensity(horizontal: -2, vertical: -2),
+            visualDensity: const VisualDensity(horizontal: -2, vertical: -2),
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(10),
             ),
@@ -413,9 +415,7 @@ class _StatsCard extends StatelessWidget {
     return Card(
       elevation: 1.5,
       margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
         child: Row(
@@ -446,10 +446,7 @@ class _StatTile extends StatelessWidget {
       children: [
         Text(
           title,
-          style: TextStyle(
-            fontSize: 12,
-            color: Colors.black.withOpacity(.65),
-          ),
+          style: TextStyle(fontSize: 12, color: Colors.black.withOpacity(.65)),
         ),
         const SizedBox(height: 6),
         RichText(
@@ -554,10 +551,10 @@ class DonutChart extends StatelessWidget {
       builder: (context, constraints) {
         final double size =
             constraints.maxHeight.isFinite && constraints.maxHeight > 0
-                ? constraints.maxHeight
-                : (constraints.maxWidth.isFinite && constraints.maxWidth > 0
-                    ? constraints.maxWidth
-                    : 200);
+            ? constraints.maxHeight
+            : (constraints.maxWidth.isFinite && constraints.maxWidth > 0
+                  ? constraints.maxWidth
+                  : 200);
         return Center(
           child: SizedBox(
             width: size,

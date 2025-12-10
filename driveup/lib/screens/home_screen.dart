@@ -5,6 +5,8 @@ import 'package:driveup/services/vehicle_service.dart';
 import 'package:driveup/services/summary_service.dart';
 import 'package:driveup/screens/sidemenu_page.dart';
 import 'package:driveup/screens/vehicle_history_page.dart';
+import 'package:driveup/widgets/profile_avatar_button.dart';
+import 'package:driveup/screens/perfil_page.dart';
 
 class HomePage extends StatelessWidget {
   const HomePage({super.key});
@@ -18,9 +20,9 @@ class HomePage extends StatelessWidget {
         leading: IconButton(
           icon: const Icon(Icons.menu, color: Colors.black87),
           onPressed: () {
-            Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const SideMenuPage()),
-            );
+            Navigator.of(
+              context,
+            ).push(MaterialPageRoute(builder: (_) => const SideMenuPage()));
           },
         ),
         centerTitle: true,
@@ -32,13 +34,17 @@ class HomePage extends StatelessWidget {
             fontWeight: FontWeight.w600,
           ),
         ),
-        actions: const [
+        actions: [
           Padding(
             padding: EdgeInsets.only(right: 12),
-            child: CircleAvatar(
-              radius: 16,
-              backgroundColor: Colors.orange,
-              child: Icon(Icons.person, color: Colors.white, size: 18),
+            child: ProfileAvatarButton(
+              onPressed: () {
+                // TODO: Navigate to profile page - import the correct class
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const PerfilPage()),
+                );
+              },
             ),
           ),
         ],
@@ -210,11 +216,8 @@ class _SummaryCardState extends State<SummaryCard> {
               );
             }
 
-            final summary = snapshot.data ??
-                MonthlySummary(
-                  fuelTotal: 0,
-                  expenseTotal: 0,
-                );
+            final summary =
+                snapshot.data ?? MonthlySummary(fuelTotal: 0, expenseTotal: 0);
 
             final fuel = summary.fuelTotal;
             final expense = summary.expenseTotal;
@@ -228,10 +231,7 @@ class _SummaryCardState extends State<SummaryCard> {
                   value: 0.5,
                   color: const Color(0xFFFFC107), // abastecimento
                 ),
-                DonutSegment(
-                  value: 0.5,
-                  color: Colors.red.shade600,
-                ),
+                DonutSegment(value: 0.5, color: Colors.red.shade600),
               ];
             } else {
               final total = (fuel + expense).clamp(0.0001, double.infinity);
@@ -257,11 +257,7 @@ class _SummaryCardState extends State<SummaryCard> {
                   child: Stack(
                     alignment: Alignment.center,
                     children: [
-                      DonutChart(
-                        segments: segments,
-                        thickness: 28,
-                        gap: 4,
-                      ),
+                      DonutChart(segments: segments, thickness: 28, gap: 4),
                       Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [

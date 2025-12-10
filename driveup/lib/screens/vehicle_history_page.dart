@@ -7,6 +7,8 @@ import 'package:driveup/services/expense_service.dart';
 import 'package:driveup/services/fuel_service.dart';
 import 'package:driveup/screens/despesa_page.dart';
 import 'package:driveup/screens/abastecimento_page.dart';
+import 'package:driveup/widgets/profile_avatar_button.dart';
+import 'package:driveup/screens/perfil_page.dart';
 
 class VehicleHistoryPage extends StatelessWidget {
   final Vehicle vehicle;
@@ -145,13 +147,22 @@ class VehicleHistoryPage extends StatelessWidget {
             fontWeight: FontWeight.w600,
           ),
         ),
-        actions: const [
+        actions: [
           Padding(
-            padding: EdgeInsets.only(right: 12),
-            child: CircleAvatar(
-              radius: 16,
-              backgroundColor: yellow,
-              child: Icon(Icons.person, color: Colors.white, size: 18),
+            padding: const EdgeInsets.only(right: 12),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(40),
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const PerfilPage()),
+                );
+              },
+              child: const CircleAvatar(
+                radius: 16,
+                backgroundColor: Colors.orange,
+                child: Icon(Icons.person, color: Colors.white, size: 18),
+              ),
             ),
           ),
         ],
